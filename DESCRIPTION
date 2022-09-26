@@ -61,9 +61,12 @@ Remotes:
     zeehio/facetscales,
     Archaeo-Programmer/paleomat
 LazyData: TRUE
-Suggests: testthat
+Suggests: 
+    rmarkdown,
+    testthat
 Encoding: UTF-8
 URL: https://github.com/Archaeo-Programmer/cropSpreadR
 BugReports: https://github.com/Archaeo-Programmer/cropSpreadR/issues
 RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr

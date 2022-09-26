@@ -1,0 +1,19 @@
+---
+title: "Maize_Spread_Processes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Maize_Spread_Processes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(cropSpreadR)
+```
