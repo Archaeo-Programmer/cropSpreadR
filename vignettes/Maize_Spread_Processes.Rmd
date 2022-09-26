@@ -3,8 +3,10 @@ title: "Maize_Spread_Processes"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Maize_Spread_Processes}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -14,6 +16,142 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, include = FALSE, results = 'hide', echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide'}
+
+# devtools::install()
+# devtools::load_all()
 library(cropSpreadR)
+require(ggh4x)
+library(cropDiffusionR)
+
 ```
+
+
+```{r load_data, include = FALSE, results = 'hide', echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide'} 
+
+# Load the temperature anomaly reconstruction from paleoMAT.
+temp_anom <-
+  readr::read_csv(
+    "https://raw.githubusercontent.com/Archaeo-Programmer/paleoMAT/master/vignettes/tables/supp_table_s2.csv",
+    show_col_types = FALSE
+  ) %>%
+  dplyr::rename(
+    year = 1,
+    anom = 2,
+    ci = 3,
+    se = 4
+  )
+
+# Load location data for each sample. Site location are not saved in this repository, as we want to ensure that archaeological site locations are protected. %>% str_remove("project_root/")
+MDB <- cropDiffusionR::maizeDB %>%
+  dplyr::left_join(
+    .,
+    readr::read_csv(stringr::str_remove(here::here(
+      "Paper 2/Maize_Database_Locations_DONT_DISTRIBUTE.csv"), "cropSpreadR/"),
+      col_types = readr::cols()
+    ),
+    by = "LabID"
+  )
+
+# Get modern annual accumulated growing degree days at each sample location.
+MDB_gdd <- MDB %>%
+  sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
+  dplyr::select(LabID) %>%
+  cropDiffusionR::extract_GDD()
+
+```
+
+
+```{r code_exploration} 
+
+
+library(tidyverse)
+
+MDB2 <- MDB %>% 
+  filter(Lat >= 30) %>% 
+  arrange(Lat, Long)
+
+interpolated <- interp(MDB2$Long, MDB2$Lat, MDB2$MedianBP, 
+                       duplicate = "mean",    #you have duplicated values
+                       output = "grid")
+
+#convert this to a long form dataframe
+interp_df <- expand_grid(i = seq_along(interpolated$x), 
+                         j = seq_along(interpolated$y)) %>% 
+  dplyr::mutate(lon = interpolated$x[i],
+         lat = interpolated$y[j],
+         emissions = map2_dbl(i, j, ~interpolated$z[.x,.y])) %>% 
+  dplyr::select(-i, -j)
+
+#then you can use this in your plot
+ggplot()+
+  geom_point(data = MDB2, aes(x = Long, y = Lat), col = "blue") +
+  geom_contour(data = interp_df, aes(x = lon, y = lat, z = emissions), binwidth = 300) + 
+  geom_text_contour(data = interp_df, aes(x = lon, y = lat, z = emissions), binwidth = 300) +
+    geom_sf(
+    data = cropDiffusionR::usa_mexico_states,
+    color = "#2b2b2b",
+    fill = "transparent",
+    size = 0.4,
+    inherit.aes = FALSE
+  ) +
+  scale_y_continuous(limits = c(30, 42)) +
+  scale_x_continuous(limits = c(-115, -104))
+
+library(akima)
+
+MDB2 <- MDB %>% 
+  filter(Lat >= 30) %>% 
+  arrange(Lat, Long)
+
+fld <- with(MDB2, interp(x = Long, y = Lat, z = MedianBP, duplicate = "mean"))
+
+filled.contour(x = fld$x,
+               y = fld$y,
+               z = fld$z,
+               color.palette =
+                 colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu"))),
+               xlab = "Longitude",
+               ylab = "Latitude",
+               main = "Rwandan rainfall",
+               key.title = title(main = "Rain (mm)", cex.main = 1))
+
+
+fld <- with(MDB2,
+            interp(
+              x = Long,
+              y = Lat,
+              z = MedianBP,
+              xo = seq(min(Long), max(Lat), length = 400),
+              duplicate = "mean"
+            ))
+
+gdat <- interp2xyz(fld, data.frame = TRUE)
+
+ggplot(gdat) +
+  aes(x = x,
+      y = y,
+      z = z,
+      fill = z) +
+  geom_tile() +
+  coord_equal() +
+  stat_contour(aes(fill=..level..), geom="polygon", breaks = seq(min(z), max(z), 100)) + 
+  geom_contour(color = "white", alpha = 0.8) +
+  scale_fill_gradientn(colors = wes_palette("Zissou1", 21, type = "continuous"),
+                       na.value = "transparent") +
+  theme_bw() +
+  scale_y_continuous(limits = c(30, 42)) +
+  scale_x_continuous(limits = c(-115, -104)) +
+  geom_sf(
+    data = cropDiffusionR::usa_mexico_states,
+    color = "#2b2b2b",
+    fill = "transparent",
+    size = 0.4,
+    inherit.aes = FALSE
+  )
+
+
+
+```
+
+
