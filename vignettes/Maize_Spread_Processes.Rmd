@@ -102,15 +102,18 @@ library(akima)
 
 fld <- with(MDB2, interp(x = Long, y = Lat, z = MedianBP, duplicate = "mean"))
 
-filled.contour(x = fld$x,
+ok <- filled.contour(x = fld$x,
                y = fld$y,
                z = fld$z,
                color.palette =
-                 colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu"))),
+                 colorRampPalette(wes_palette("Zissou1", 21, type = "continuous")),
                xlab = "Longitude",
                ylab = "Latitude",
-               main = "Rwandan rainfall",
-               key.title = title(main = "Rain (mm)", cex.main = 1))
+               main = "Years BP",
+               plot.axes = { contour(fld$x,fld$y,fld$z,  
+                                 drawlabels = TRUE, axes = FALSE, 
+                                 frame.plot = FALSE, add = TRUE);
+             axis(1); axis(2) })
 
 
 library(akima)
@@ -119,30 +122,32 @@ library("wesanderson")
 
 MDB2 <- MDB %>% 
   dplyr::filter(Lat >= 30 & Date <= 1500) %>% 
-  dplyr::arrange(desc(MedianBP))
+  dplyr::arrange(desc(MedianBP)) %>% 
+  dplyr::group_by(Long, Lat) %>% 
+  dplyr::slice_max(MedianBP, with_ties = FALSE)
 
 fld <- with(MDB2,
             interp(
               x = Long,
               y = Lat,
               z = MedianBP,
-              xo = seq(min(Long), max(Long), length = 100),
-              yo = seq(min(Lat), max(Lat), length = 100),
-              duplicate = "mean"
+              xo = seq(min(Long), max(Long), length = 800),
+              yo = seq(min(Lat), max(Lat), length = 800)
+              #duplicate = "mean"
             ))
 
 gdat <- interp2xyz(fld, data.frame = TRUE)
 
-ggplot(gdat) +
+ok <- ggplot(gdat) +
   aes(x = x,
       y = y,
       z = z,
       fill = z) +
   geom_tile() +
   coord_equal() +
-  stat_contour(aes(fill=..level..), geom="polygon", binwidth=300) + 
+  stat_contour(aes(fill= fit <<- ..level..), geom="polygon", binwidth=300) + 
   geom_contour(color = "white", alpha = 0.8) +
-  geom_text_contour(binwidth = 300) +
+  #geom_label_contour(binwidth = 300) +
   scale_fill_gradientn(colors = wes_palette("Zissou1", 21, type = "continuous"),
                        na.value = "transparent", name="Years BP") +
   theme_bw() +
@@ -155,8 +160,12 @@ ggplot(gdat) +
     size = 0.4,
     inherit.aes = FALSE
   ) +
-  xlab("")
+  #geom_point(data = MDB2, aes(x = Long, y = Lat), size = 3, inherit.aes = FALSE) +
+  xlab("") +
+  ylab("")
 
+
+hello <- ggplot2::ggplot_build(ok)$data[[2]]
 ```
 
 
