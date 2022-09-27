@@ -59,6 +59,10 @@ MDB_gdd <- MDB %>%
   dplyr::select(LabID) %>%
   cropDiffusionR::extract_GDD()
 
+
+MDB3 <- MDB %>% 
+  dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah"))
+
 ```
 
 
@@ -110,10 +114,11 @@ ok <- filled.contour(x = fld$x,
                xlab = "Longitude",
                ylab = "Latitude",
                main = "Years BP",
+               #plot.axes=maps::map('state',add=T))
                plot.axes = { contour(fld$x,fld$y,fld$z,  
                                  drawlabels = TRUE, axes = FALSE, 
                                  frame.plot = FALSE, add = TRUE);
-             axis(1); axis(2) })
+             axis(1); axis(2); maps::map('state',add=T) })
 
 
 library(akima)
@@ -339,5 +344,3 @@ out %>%
   )
 
 ```
-
-
