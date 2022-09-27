@@ -100,10 +100,6 @@ ggplot()+
 
 library(akima)
 
-MDB2 <- MDB %>% 
-  filter(Lat >= 30) %>% 
-  arrange(Lat, Long)
-
 fld <- with(MDB2, interp(x = Long, y = Lat, z = MedianBP, duplicate = "mean"))
 
 filled.contour(x = fld$x,
@@ -117,12 +113,21 @@ filled.contour(x = fld$x,
                key.title = title(main = "Rain (mm)", cex.main = 1))
 
 
+library(akima)
+library(metR)
+library("wesanderson")
+
+MDB2 <- MDB %>% 
+  dplyr::filter(Lat >= 30 & Date <= 1500) %>% 
+  dplyr::arrange(desc(MedianBP))
+
 fld <- with(MDB2,
             interp(
               x = Long,
               y = Lat,
               z = MedianBP,
-              xo = seq(min(Long), max(Lat), length = 400),
+              xo = seq(min(Long), max(Long), length = 100),
+              yo = seq(min(Lat), max(Lat), length = 100),
               duplicate = "mean"
             ))
 
@@ -135,10 +140,11 @@ ggplot(gdat) +
       fill = z) +
   geom_tile() +
   coord_equal() +
-  stat_contour(aes(fill=..level..), geom="polygon", breaks = seq(min(z), max(z), 100)) + 
+  stat_contour(aes(fill=..level..), geom="polygon", binwidth=300) + 
   geom_contour(color = "white", alpha = 0.8) +
+  geom_text_contour(binwidth = 300) +
   scale_fill_gradientn(colors = wes_palette("Zissou1", 21, type = "continuous"),
-                       na.value = "transparent") +
+                       na.value = "transparent", name="Years BP") +
   theme_bw() +
   scale_y_continuous(limits = c(30, 42)) +
   scale_x_continuous(limits = c(-115, -104)) +
@@ -148,9 +154,8 @@ ggplot(gdat) +
     fill = "transparent",
     size = 0.4,
     inherit.aes = FALSE
-  )
-
-
+  ) +
+  xlab("")
 
 ```
 
