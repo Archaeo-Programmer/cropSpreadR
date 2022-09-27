@@ -166,6 +166,178 @@ ok <- ggplot(gdat) +
 
 
 hello <- ggplot2::ggplot_build(ok)$data[[2]]
+
+out <- hello %>% 
+  dplyr::select(year = order, Long = x, Lat = y) %>% 
+  sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326, remove = FALSE) %>% 
+  dplyr::bind_cols(., gdd = terra::extract(x = cropDiffusionR::NASW_gdd, y = .)) %>% 
+  dplyr::filter(!is.na(gdd)) %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::group_by(year) %>% 
+  summarise(Lat = mean(Lat), gdd = mean(gdd)) %>% 
+  dplyr::arrange(desc(year)) %>% 
+  dplyr::mutate(deltaLat = Lat - lag(Lat),
+                deltaGDD = gdd - lag(gdd),
+                date = rcarbon::BPtoBCAD(year))
+
+
+# Change in latitude.
+out %>%
+  ggplot2::ggplot(aes(x = date, y = Lat)) +
+  geom_line(size = 2, color = "#A60F2D") +
+  xlab("Years BC/AD") +
+  ylab("Latitude") +
+  scale_x_continuous(breaks = seq(-2600, 1100, 300)) +
+  # scale_y_continuous(
+  #   breaks = seq(-0.7, 0, 0.1),
+  #   limits = c(-0.7, 0),
+  #   minor_breaks = seq(-0.65,-0.05, by = 0.05),
+  #   guide = "axis_minor"
+  # ) +
+  theme_bw() +
+  theme(
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+# Change in gdd (delta)
+out %>%
+  ggplot2::ggplot(aes(x = date, y = deltaGDD)) +
+  geom_line(size = 2, color = "#A60F2D") +
+  xlab("Years BC/AD") +
+  ylab("Delta GDD") +
+  scale_x_continuous(breaks = seq(-2600, 1100, 300)) +
+  scale_y_reverse(
+    breaks = seq(-4500, 500, 500)
+  ) +
+  theme_bw() +
+  theme(
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+
+# GDD 
+out %>%
+  ggplot2::ggplot(aes(x = date, y = gdd)) +
+  geom_line(size = 2, color = "#A60F2D") +
+  xlab("Years BC/AD") +
+  ylab("GDD") +
+  scale_x_continuous(breaks = seq(-2600, 1100, 300)) +
+  scale_y_reverse(
+    breaks = seq(1000, 4000, 500)
+  ) +
+  theme_bw() +
+  theme(
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
 ```
 
 
