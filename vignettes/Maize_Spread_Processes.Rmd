@@ -118,12 +118,28 @@ ok <- filled.contour(x = fld$x,
                plot.axes = { contour(fld$x,fld$y,fld$z,  
                                  drawlabels = TRUE, axes = FALSE, 
                                  frame.plot = FALSE, add = TRUE);
-             axis(1); axis(2); maps::map('state',add=T) })
+             axis(1); axis(2); maps::map('state',add=T); points(5, 5) })
+
+
+library(raster)
+library(fields)
+
+
+xy <- data.frame(x = MDB2$Long, y = MDB2$Lat)
+z = MDB2$MedianBP
+rast <- raster(ext=extent(xy), crs=4326, resolution = 0.01)
+
+m <- fields::Tps(xy, z)
+surface <- raster::interpolate(rast, m)
+
+plot(surface)
+contour(surface, add = TRUE)
 
 
 library(akima)
 library(metR)
 library("wesanderson")
+library(scales)
 
 MDB2 <- MDB %>% 
   dplyr::filter(Lat >= 30 & Date <= 1500) %>% 
@@ -152,7 +168,7 @@ ok <- ggplot(gdat) +
   coord_equal() +
   stat_contour(aes(fill= fit <<- ..level..), geom="polygon", binwidth=300) + 
   geom_contour(color = "white", alpha = 0.8) +
-  #geom_label_contour(binwidth = 300) +
+  geom_text_contour(binwidth = 300) +
   scale_fill_gradientn(colors = wes_palette("Zissou1", 21, type = "continuous"),
                        na.value = "transparent", name="Years BP") +
   theme_bw() +
