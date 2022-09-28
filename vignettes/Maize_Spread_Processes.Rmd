@@ -63,6 +63,11 @@ MDB_gdd <- MDB %>%
 MDB3 <- MDB %>% 
   dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah"))
 
+
+# Extract elevation.
+MDB_elev <- cropSpreadR::MDB_elev
+
+
 ```
 
 
