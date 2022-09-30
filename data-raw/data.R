@@ -47,5 +47,61 @@ usethis::use_data(MDB_elev,
 
 
 # Get annual accumulated GDD.
+# Calculate average days per month during 1970-2000.
+month_days <-
+  tibble::tibble(date = seq(
+    lubridate::as_date("1970-01-01"),
+    lubridate::as_date("2000-12-31"),
+    "1 day"
+  )) %>%
+  dplyr::mutate(year = lubridate::year(date),
+                month = lubridate::month(date)) %>%
+  dplyr::group_by(year, month) %>%
+  dplyr::count() %>%
+  dplyr::group_by(month) %>%
+  dplyr::summarise(`days` = mean(n)) %>%
+  dplyr::pull(days)
+
+
+# Get PRISM monthly gdd (takes a few minutes to run)
+PRISM_gdd_monthly <-
+  # Need tmin and tmax to calculate the tavg
+  c(tmin = "tmin", tmax = "tmax") %>%
+  purrr::map(
+    function(var){
+      # Read and stack rasters for 1970 to 2000.
+      out_rast <- list.files(paste0("/Volumes/DATA/PRISM/EXTRACTIONS/SKOPE_4CORNERS/",var),
+                             full.names = TRUE,
+                             pattern = "(?:197[0-9]|19[8-9][0-9]|2000)") %>%
+        raster::stack(quick = TRUE) %>%
+        raster::readAll()
+
+      # Create a z variable called months
+      months <- names(out_rast) %>%
+        stringr::str_extract("M(.*)$")
+
+      # Take the mean of the raster layers by month and return
+      out_rast %>%
+        raster::setZ(months,
+                     name = "months") %>%
+        raster::zApply(by = months,
+                       fun = mean,
+                       name = 'months') %>%
+        magrittr::divide_by(10)
+
+    }
+  ) %>%
+  # Get GDD for each month.
+  purrr::reduce(.f = function(x, y){
+    paleomat::calc_gdd(tmin = x, tmax = y, t.base = 10, t.cap = 30)
+  }) %>%
+  # Multiply by the number of days in a month to get the total accumulated GDD for each month.
+  {. * month_days}
+
+# Sum all 12 months.
+PRISM_annual_gdd <- sum(PRISM_gdd_monthly, na.rm = FALSE)
+
+usethis::use_data(PRISM_annual_gdd,
+                  overwrite = TRUE)
 
 

@@ -44,28 +44,248 @@ temp_anom <-
 
 # Load location data for each sample. Site location are not saved in this repository, as we want to ensure that archaeological site locations are protected. %>% str_remove("project_root/")
 MDB <- cropDiffusionR::maizeDB %>%
-  dplyr::left_join(
-    .,
-    readr::read_csv(stringr::str_remove(here::here(
-      "Paper 2/Maize_Database_Locations_DONT_DISTRIBUTE.csv"), "cropSpreadR/"),
-      col_types = readr::cols()
-    ),
-    by = "LabID"
-  )
+  dplyr::left_join(.,
+                   readr::read_csv(
+                     stringr::str_remove(
+                       here::here("Paper 2/Maize_Database_Locations_DONT_DISTRIBUTE.csv"),
+                       "cropSpreadR/"
+                     ),
+                     col_types = readr::cols()
+                   ),
+                   by = "LabID")
 
-# Get modern annual accumulated growing degree days at each sample location.
-MDB_gdd <- MDB %>%
+# Get modern annual accumulated growing degree days at each sample location. We use WorldClim 30 sec. (~1 km) for Mexico and use PRISM (~800 meters) for USA.
+MDB_gdd_wc <- MDB %>%
   sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
   dplyr::select(LabID) %>%
-  cropDiffusionR::extract_GDD()
+  cropDiffusionR::extract_GDD(gdd_raster = cropDiffusionR::WorldClim_annual_gdd,
+                              sites = .)
+
+MDB_gdd_prism <- MDB %>%
+  sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
+  dplyr::select(LabID) %>%
+  cropDiffusionR::extract_GDD(gdd_raster = cropSpreadR::PRISM_annual_gdd,  sites = .)
+
+MDB_gdd <-
+  dplyr::left_join(MDB_gdd_prism, MDB_gdd_wc, by = "LabID") %>%
+  dplyr::mutate(GDD = dplyr::coalesce(GDD.x, GDD.y)) %>%
+  dplyr::select(-c(GDD.x, GDD.y))
 
 
-MDB3 <- MDB %>% 
+# Add GDD and elevation to maize dataset.
+MDB_env <- MDB %>%
+  dplyr::select(-Elevation_masl) %>%
+  dplyr::left_join(., MDB_gdd, by = "LabID") %>%
+  # Add elevation to dataset.
+  dplyr::left_join(., cropSpreadR::MDB_elev, by = "LabID")
+
+
+MDB3 <- MDB %>%
   dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah"))
 
 
-# Extract elevation.
-MDB_elev <- cropSpreadR::MDB_elev
+mlr <- MDB_env %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_min(Date) %>%
+  dplyr::filter(Lat >= 30 & Date < 1500) %>%
+  dplyr::mutate(bin = cut(
+    Date,
+    breaks = seq(-3700, 1500, 100))) %>% 
+  dplyr::group_by(bin) %>% 
+  dplyr::mutate(group = cur_group_id())
+
+fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
+summary(fit)
+
+ggplot(mlr, aes(Date, Lat)) +
+  geom_smooth(method = 'lm', formula = y ~ x) +
+  #scale_x_reverse() +
+  geom_point()
+
+#load car package
+library(car)
+
+#produce added variable plots
+avPlots(fit)
+
+
+```
+
+
+```{r TPS}
+
+TPS_inter <- MDB %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_max(MedianBP) %>%
+  dplyr::filter(Lat >= 30 & Date < 1500)
+
+df <- data.frame(x = TPS_inter$Long, y = TPS_inter$Lat, z = TPS_inter$MedianBP)
+
+library(sp)
+library(rgdal)
+library(geosphere)
+library(raster)
+library(fields)
+
+x = TPS_inter$Long
+y = TPS_inter$Lat
+z = TPS_inter$MedianBP
+
+# convert data to a SpatialPointsDataFrame object
+xysp <- SpatialPointsDataFrame(
+      matrix(c(x,y), ncol=2), data.frame(ID=seq(1:length(x))),
+      proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84"))
+
+# use the distm function to generate a geodesic distance matrix in meters
+mdist <- distm(xysp)
+
+# cluster all points using a hierarchical clustering approach
+hc <- hclust(as.dist(mdist), method="complete")
+
+# define the distance threshold, in this case 40 m
+d=6437.38
+
+# define clusters based on a tree "height" cutoff "d" and add them to the SpDataFrame
+xyp2 <- xysp
+xyp2$clust <- cutree(hc, h=d)
+
+df_clus <- as.data.frame(xyp2, z, TPS_inter$SiteIDName) %>%
+  dplyr::group_by(clust) %>%
+  dplyr::slice_max(z, with_ties = FALSE) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-c(ID, clust)) %>% 
+  dplyr::filter(!TPS_inter.SiteIDName %in% c("AA:12:745", "AA:12:232"))
+  #dplyr::mutate(z = ifelse(TPS_inter.SiteIDName %in% c("AA:12:745", 	"AA:12:232", "BB:13:6", "AA:12:91", "AA:12:111"), 5089.5, z))
+
+
+
+xy <- data.frame(x = df_clus$coords.x1, y = df_clus$coords.x2)
+z2 = df_clus$z
+rast <- raster::raster(ext = extent(xy),
+                       crs = 4326,
+                       resolution = 0.01)
+
+m <- fields::Tps(xy, z2)
+surface <- raster::interpolate(rast, m)
+
+png(
+  here::here("vignettes/figures/date_map.png"),
+  units = "in",
+  width = 15.43,
+  height = 13.15,
+  res = 600
+)
+
+plot(
+  interp_NN,
+  xlim = c(-113.7015,-104.7915),
+  ylim = c(30.30626, 41.47626),
+  col = wes_palette("Zissou1", 21, type = "continuous"),
+  asp = NA,
+  xaxt = 'n',
+  yaxt = 'n',
+  legend.args = list(text = '       cal BP \n', side = 3, font=2)
+)
+contour(
+  interp_NN,
+  asp = NA,
+  add = T,
+  labcex = 0.75,
+  xaxt = 'n',
+  yaxt = 'n',
+  vfont=c("sans serif", "bold")
+)
+maps::map('state', add = TRUE, lwd = 1.5)
+
+dev.off()
+
+
+# will need to rename colnames for raster
+colnames(df) <- c('x', 'y', 'vals')
+
+# create a raster object
+r_obj <- raster(xmn=-113.75, xmx=-104.8, ymn=30.25, ymx=41.5, resolution=c(0.05,0.05))
+
+# use rasterize to create desired raster
+r_data <- rasterize(x=df[, 1:2], # lon-lat data
+                    y=r_obj, # raster object
+                    field=df[, 3], # vals to fill raster with
+                    fun=max) # aggregate function
+
+plot(r_data)
+
+
+library(raster)
+library(fields)
+
+ok3 <- ok2
+
+xy <- data.frame(x = ok3$x, y = ok3$y)
+z = ok3$z
+rast <- raster(ext=extent(xy), crs=4326, resolution = 0.01)
+
+m <- fields::Tps(xy, z)
+surface <- raster::interpolate(rast, m)
+
+plot(surface)
+contour(surface, add = TRUE)
+
+# Get raster for the North American Southwest and convert to a dataframe.
+NASW_gdd_data <-
+  raster::as.data.frame(surface, xy = TRUE)
+# Assign names to the columns.
+names(NASW_gdd_data) <- c("long", "lat", "GDD")
+#Transform the data for plotting in ggplot.
+NASW_gdd_data_transformed <-
+  usmap::usmap_transform(
+    NASW_gdd_data,
+    input_names = c("long", "lat"),
+    output_names = c("x", "y")
+  )
+
+ggplot2::ggplot(data = NASW_gdd_data_transformed) +
+  geom_raster(aes(x = long, y = lat, fill = GDD),
+              alpha = 0.8,
+              na.rm = TRUE) +
+  #For GDD raster in color.
+  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+                       na.value = "transparent",
+                       name = "Annual GDDs") +
+  coord_equal() +
+  theme_bw() +
+    aes(x = long,
+      y = lat,
+      z = GDD,
+      fill = GDD) +
+  stat_contour(geom="polygon", binwidth=500) + 
+  geom_contour(color = "white", alpha = 0.8) +
+  geom_text_contour(binwidth = 500) +
+  
+  
+  geom_sf(
+    data = cropDiffusionR::usa_mexico_states,
+    color = "#2b2b2b",
+    fill = "transparent",
+    size = 0.4,
+    inherit.aes = FALSE
+  ) +
+  theme(
+    legend.position = c(.15, .2),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 15, family = "Helvetica"),
+    legend.title = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    )
+  )
+
 
 
 ```
@@ -152,13 +372,13 @@ MDB2 <- MDB %>%
   dplyr::group_by(Long, Lat) %>% 
   dplyr::slice_max(MedianBP, with_ties = FALSE)
 
-fld <- with(MDB2,
+fld <- with(df_clus,
             interp(
-              x = Long,
-              y = Lat,
-              z = MedianBP,
-              xo = seq(min(Long), max(Long), length = 800),
-              yo = seq(min(Lat), max(Lat), length = 800)
+              x = coords.x1,
+              y = coords.x2,
+              z = z,
+              xo = seq(min(coords.x1), max(coords.x1), length = 800),
+              yo = seq(min(coords.x2), max(coords.x2), length = 800)
               #duplicate = "mean"
             ))
 
