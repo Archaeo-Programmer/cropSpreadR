@@ -43,6 +43,8 @@ temp_anom <-
   )
 
 # Load location data for each sample. Site location are not saved in this repository, as we want to ensure that archaeological site locations are protected. %>% str_remove("project_root/")
+sf::sf_use_s2(FALSE)
+
 MDB <- cropDiffusionR::maizeDB %>%
   dplyr::left_join(.,
                    readr::read_csv(
@@ -52,7 +54,18 @@ MDB <- cropDiffusionR::maizeDB %>%
                      ),
                      col_types = readr::cols()
                    ),
-                   by = "LabID")
+                   by = "LabID") %>%
+  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("Long1", "Lat1"),
+               crs = 4326) %>%
+  sf::st_make_valid() %>%
+  # Join to counties data to get county and state information.
+  sf::st_join(SWUS_counties) %>%
+  dplyr::mutate(county_st = ifelse(!is.na(REGION) &
+                                     !is.na(NAME), paste(NAME, REGION, sep = ", "), NA)) %>%
+  sf::st_drop_geometry() %>% 
+  suppressMessages()
 
 # Get modern annual accumulated growing degree days at each sample location. We use WorldClim 30 sec. (~1 km) for Mexico and use PRISM (~800 meters) for USA.
 MDB_gdd_wc <- MDB %>%
@@ -92,15 +105,28 @@ mlr <- MDB_env %>%
     Date,
     breaks = seq(-3700, 1500, 100))) %>% 
   dplyr::group_by(bin) %>% 
-  dplyr::mutate(group = dplyr::cur_group_id())
+  dplyr::mutate(group = dplyr::cur_group_id()) %>% 
+  #dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>% 
+  dplyr::ungroup()
 
 fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
 summary(fit)
 
-ggplot(mlr, aes(Date, Lat)) +
-  geom_smooth(method = 'lm', formula = y ~ x) +
+mlr %>%
+  dplyr::select(Date, Lat, GDD, elevation) %>%
+  #dplyr::select(Date, Lat) %>%
+  tidyr::pivot_longer(-Date) %>%
+  ggplot(aes(Date, value)) +
+  geom_smooth(
+    method = 'lm',
+    formula = y ~ x,
+    se = T,
+    fullrange = TRUE
+    #aes(color = name)
+  ) +
   #scale_x_reverse() +
-  geom_point()
+  geom_point() +
+  facet_wrap(vars(name), scales = "free")
 
 #load car package
 library(car)
@@ -207,133 +233,98 @@ ggplot2::ggsave(
 
 ```{r spd}
 
-counties10sf <-
-  sf::st_as_sf(maps::map("county", fill = TRUE, plot = FALSE)) %>%
-  sf::st_transform(., crs = 4326) %>%
-  tidyr::separate(ID, into = c("REGION", "NAME"), sep = ",") %>%
-  dplyr::filter(REGION %in% c("colorado", "utah", "arizona", "new mexico")) %>%
-  sf::st_make_valid()
-
-bad_loc <- p3k14c::p3k14c_data %>%
-  dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
-  dplyr::filter(LocAccuracy == 0 & !is.na(SiteName)) %>%
-  dplyr::select(-c(Long, Lat)) %>%
-  dplyr::left_join(., MDB %>% dplyr::select(SiteName, Long, Lat) %>% dplyr::distinct(SiteName, .keep_all = TRUE ), by = "SiteName") %>%
-  dplyr::filter(!is.na(Long))
-
-sf::sf_use_s2(FALSE)
-
-Four_corners <- p3k14c::p3k14c_data %>%
-  dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
-  dplyr::filter(stringr::str_detect(Taxa, "Zea|zea")) %>%
-  dplyr::filter(LocAccuracy > 0) %>%
-  dplyr::bind_rows(., bad_loc) %>%
-  dplyr::distinct() %>%
-  dplyr::mutate (calib = "intcal20", db = "p3k14c",
-                 d13C = as.numeric(d13C)) %>%
-  dplyr::bind_rows(., MDB %>% dplyr::select(intersect(names(p3k14c::p3k14c_data),names(MDB)), SiteIDName) %>% dplyr::mutate(db = "mine", calib = "intcal20")) %>%
-  dplyr::group_by(LabID) %>%
-  dplyr::arrange(LabID, db) %>%
-  dplyr::slice(1) %>%
-  sf::st_as_sf(  # Convert to spatial object
-    coords = c("Long", "Lat"),
-    crs = 4326
-  ) %>%
-  sf::st_make_valid() %>%
-  sf::st_join(counties10sf)
-
 MDB3A <- MDB %>%
   dplyr::filter(Country == "USA") %>%
   dplyr::select(LabID, Long, Lat, SiteIDName, MedianBP) %>%
   dplyr::mutate(SiteIDName = ifelse(SiteIDName == "Willard Mounds", "42BO3", SiteIDName))
 
-by_county <- readr::read_rds("/Users/andrew/Dropbox/WSU/SKOPEII/model/Paper 3/four-corners-counties.rds")
+# Get sites that are on the northern maize frontier through time from cropDiffusionR package.
+temp <- tempfile()
+download.file(
+  "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_swus.rds",
+  temp
+)
+maize_frontier_swus <-
+  readr::read_rds(temp, "maize_frontier_swus.rds")
+unlink(temp)
 
-by_county2 <- by_county %>%
-  # dplyr::select(-data)
-  dplyr::mutate(spds = purrr::map(spds,
-                    ~ dplyr::mutate(.x,
-                             presence = ifelse(PrDens == 0, 0, 1),
-                             change = tsibble::difference(presence, default = dplyr::first(presence)),
-                             firstdiff = tsibble::difference(PrDens, default = dplyr::first(PrDens)),
-                             change_words = ifelse(change == 1, "Begin occupation",
-                                                   ifelse(change == -1, "End occupation", 0))
-                    )
-  )) %>%
-  dplyr::mutate(REGION = dplyr::case_when(REGION == "UT" ~ "utah",
-                                          REGION == "CO" ~ "colorado",
-                                          REGION == "NM" ~ "new mexico",
-                                          REGION == "AZ" ~ "arizona"),
-                NAME = tolower(NAME)) %>%
-  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", "))
-
-fig6_county_st <- MDB_min_fig6 %>% 
-    sf::st_as_sf(  # Convert to spatial object
-    coords = c("Long", "Lat"),
-    crs = 4326
-  ) %>%
-  sf::st_make_valid() %>%
-  sf::st_join(counties10sf) %>% 
-  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", "))
-
-maize_temp2 <- Four_corners %>%
+maize_oldest <- sw_rc %>%
+  dplyr::filter(stringr::str_detect(Taxa, "zea|Zea")) %>%
   dplyr::filter(LabID != "Beta-122953") %>%
-  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", ")) %>%
-  dplyr::filter(county_st %in% fig6_county_st$county_st) %>%
-  dplyr::select(county_st, Age, Error, calib)
+  dplyr::filter(county_st %in% maize_frontier_swus$county_st)
 
-maize_temp2b <-
-  rcarbon::calibrate(x = maize_temp2$Age,
-                     errors = maize_temp2$Error,
-                     calCurves = maize_temp2$calib,
-                     verbose = FALSE) %>%
-  summary() %>%
-  dplyr::bind_cols(maize_temp2, .) %>%
-  dplyr::select(county_st, MedianBP) %>%
-  sf::st_drop_geometry() %>%
-  dplyr::group_by(county_st) %>%
-  dplyr::slice_max(MedianBP, with_ties = FALSE) %>% 
-  dplyr::mutate(county_st = tools::toTitleCase(county_st))
-
-county_lat <- p3k14c::p3k14c_data %>%
-  dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
-  dplyr::filter(LocAccuracy > 0) %>%
-  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>% 
-  sf::st_as_sf(  # Convert to spatial object
-    coords = c("Long1", "Lat1"),
-    crs = 4326
+maize_oldest2 <-
+  rcarbon::calibrate(
+    x = maize_oldest$Age,
+    errors = maize_oldest$Error,
+    calCurves = maize_oldest$calib,
+    verbose = FALSE
   ) %>%
-  sf::st_make_valid() %>%
-  sf::st_join(counties10sf) %>% 
-  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", ")) %>% 
-  dplyr::group_by(county_st) %>% 
-  dplyr::slice(1) %>% 
-  dplyr::select(county_st, Lat) %>% 
-  sf::st_drop_geometry() %>% 
-  dplyr::arrange(desc(Lat)) %>% 
-  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>% 
-  dplyr::filter(county_st %in% maize_temp2b$county_st)
-  
+  summary() %>%
+  dplyr::bind_cols(maize_oldest, .) %>%
+  dplyr::select(county_st, MedianBP, LabID, SiteID, SiteName) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::slice_max(MedianBP, with_ties = FALSE) %>%
+  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
+  dplyr::left_join(.,
+                   MDB %>% dplyr::select(LabID, SiteID, SiteName, SiteIDName),
+                   by = "LabID") %>%
+  dplyr::mutate(
+    SiteID = dplyr::coalesce(SiteID.y, SiteID.x),
+    SiteName = dplyr::coalesce(SiteName.y, SiteName.x),
+    .keep = "unused"
+  ) %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID))
 
-by_county_changes <- by_county2 %>%
-  dplyr::filter(county_st %in% fig6_county_st$county_st) %>%
-  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>% 
-  tidyr::unnest(cols = c(spds)) %>%
-  dplyr::left_join(maize_temp2b, ., by = "county_st") %>%
-  dplyr::mutate(MedianBP = ifelse(MedianBP == calBP, MedianBP, NA)) %>% 
-  dplyr::left_join(., county_lat, by = "county_st") %>% 
+county_centroid <- SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st, centroid_lat) %>%
   dplyr::mutate(county_st = tools::toTitleCase(county_st))
+
+by_county_changes <- SPD_county %>%
+  dplyr::filter(county_st %in% maize_frontier_swus$county_st) %>%
+  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
+  dplyr::left_join(maize_oldest2, ., by = "county_st") %>%
+  dplyr::left_join(
+    .,
+    SWUS_counties %>%
+      sf::st_drop_geometry() %>%
+      dplyr::select(county_st, centroid_lat) %>%
+      dplyr::mutate(county_st = tools::toTitleCase(county_st)),
+    by = "county_st"
+  ) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  # Remove all columns with word site, except for SiteNameID, and remove name and region columns.
+  dplyr::select(-c(starts_with("Site", vars = names(.)[stringr::str_detect(names(.), "SiteNameID", negate = TRUE)]), NAME, REGION, LabID)) %>%
+  tidyr::unnest(cols = c(spds)) %>%
+  dplyr::mutate(MedianBP = ifelse(MedianBP == calBP, MedianBP, NA),
+                SiteNameID = ifelse(!is.na(MedianBP), SiteNameID, NA)) %>% 
+  dplyr::mutate(county_st = paste0(county_st, " (n = ", n, ")"))
+  
 
 spd_plot <- ggplot(data = by_county_changes, aes(y = PrDens, x = calBP)) +
   geom_line() +
-  geom_point(aes(y = PrDens, x = MedianBP), size = 2.25, color = "red", inherit.aes = FALSE) +
+  geom_point(aes(y = PrDens, x = MedianBP), size = 2.75, color = "red", inherit.aes = FALSE) +
+  geom_label_repel(aes(y = PrDens, x = MedianBP, label = SiteNameID), color = "red", cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size=NA) +
   theme_bw() +
-  scale_x_reverse(breaks = seq(0, 7000, 1000), limits = c(7000, 0)) +
-  facet_wrap(~factor(county_st, levels=unique(county_lat$county_st)), scales = "free_y", ncol = 1) +
+  scale_x_reverse(breaks = seq(0, 6000, 1000), limits = c(6000, 0)) +
+  scale_y_continuous(breaks = function(x) seq(0, max(x), length.out = 3),
+                     labels = function(y) sprintf("%.2f", y)) +
+  facet_wrap(~factor(county_st, levels=unique(by_county_changes$county_st)), scales = "free_y", ncol = 1) +
   xlab("Years cal BP") +
   ylab("Summed Probability") +
   theme(
-    strip.text.x = element_text(size = 14),
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(size = 16, 
+                                family = "Helvetica",
+                                face = "bold"),
     axis.ticks.length = unit(0.125, "inch"),
     #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
@@ -373,11 +364,14 @@ spd_plot <- ggplot(data = by_county_changes, aes(y = PrDens, x = calBP)) +
     )
   )
 
+spd_plot
+
+
 ggplot2::ggsave(
   filename = here::here("vignettes/figures/spd_plotb.png"),
   plot = spd_plot,
-  width = 15.51,
-  height = 17.32,
+  width = 16,
+  height = 18,
   dpi = 600
 )
 

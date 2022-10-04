@@ -198,7 +198,37 @@ usethis::use_data(PRISM_gs_gdd,
                   overwrite = TRUE)
 
 
-# Calculate county SPDs.
+# Get counties shapefiles for the SWUS.
+SWUS_counties <-
+  sf::st_as_sf(
+    maps::map(
+      "county",
+      fill = TRUE,
+      plot = FALSE,
+      regions = "colorado|utah|arizona|new mexico"
+    )
+  ) %>%
+  sf::st_transform(crs = 4326) %>%
+  tidyr::separate(ID, into = c("REGION", "NAME"), sep = ",") %>%
+  dplyr::filter(REGION %in% c("colorado", "utah", "arizona", "new mexico")) %>%
+  sf::st_make_valid() %>%
+  dplyr::mutate(
+    county_st = paste(NAME, REGION, sep = ", "),
+    centroid = purrr::map(geom, ~ sf::st_centroid(.x))
+  ) %>%
+  tidyr::separate(centroid,
+                  into = c("centroid_long", "centroid_lat"),
+                  sep = ", ") %>%
+  dplyr::mutate(dplyr::across(dplyr::starts_with("centroid"), ~ readr::parse_number(.x)))
+
+usethis::use_data(SWUS_counties,
+                  overwrite = TRUE)
+
+
+# Get all four corners radiocarbon data, and then calculate county SPDs.
+sf::sf_use_s2(FALSE)
+
+# Get maize database and add location data.
 MDB <- cropDiffusionR::maizeDB %>%
   dplyr::left_join(.,
                    readr::read_csv(
@@ -208,70 +238,109 @@ MDB <- cropDiffusionR::maizeDB %>%
                      ),
                      col_types = readr::cols()
                    ),
-                   by = "LabID")
+                   by = "LabID") %>%
+  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("Long1", "Lat1"),
+               crs = 4326) %>%
+  sf::st_make_valid() %>%
+  # Join to counties data to get county and state information.
+  sf::st_join(SWUS_counties) %>%
+  dplyr::mutate(county_st = ifelse(!is.na(REGION) &
+                                     !is.na(NAME), paste(NAME, REGION, sep = ", "), NA)) %>%
+  sf::st_drop_geometry() %>%
+  suppressMessages()
 
-counties10sf <-
-  sf::st_as_sf(maps::map("county", fill = TRUE, plot = FALSE)) %>%
-  sf::st_transform(., crs = 4326) %>%
-  tidyr::separate(ID, into = c("REGION", "NAME"), sep = ",") %>%
-  dplyr::filter(REGION %in% c("colorado", "utah", "arizona", "new mexico")) %>%
-  sf::st_make_valid()
-
+# Get p3k14c data and filter out sites that do not have location data. We are able to provide locations for a few additional sites.
 bad_loc <- p3k14c::p3k14c_data %>%
   dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
   dplyr::filter(LocAccuracy == 0 & !is.na(SiteName)) %>%
   dplyr::select(-c(Long, Lat)) %>%
+  # Add sites with locations from the maize database to the p3k14c data.
   dplyr::left_join(
     .,
     MDB %>% dplyr::select(SiteName, Long, Lat) %>% dplyr::distinct(SiteName, .keep_all = TRUE),
     by = "SiteName"
   ) %>%
+  # Remove any sites that do not have locations.
   dplyr::filter(!is.na(Long))
 
-sf::sf_use_s2(FALSE)
-
-Four_corners <- p3k14c::p3k14c_data %>%
+# Get all four corners data.
+sw_rc <- p3k14c::p3k14c_data %>%
   dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
+  # Remove sites with no location information.
   dplyr::filter(LocAccuracy > 0) %>%
+  # Add sites/samples back in that we provided location data from the maize database.
   dplyr::bind_rows(., bad_loc) %>%
+  # Keep only distinct from LabID.
   dplyr::distinct(LabID, .keep_all = TRUE) %>%
+  # Establish the calibration curve to use and covert d13C to numeric.
   dplyr::mutate (calib = "intcal20",
-                 d13C = as.numeric(d13C)) %>%
-  sf::st_as_sf(# Convert to spatial object
-    coords = c("Long", "Lat"),
-    crs = 4326) %>%
+                 d13C = as.numeric(d13C),
+                 db = "p3k14c") %>%
+  dplyr::bind_rows(
+    MDB %>% dplyr::select(dplyr::intersect(names(
+      p3k14c::p3k14c_data
+    ), names(MDB))) %>% dplyr::mutate(db = "mine", calib = "intcal20"),
+    .
+  ) %>%
+  dplyr::group_by(LabID) %>%
+  dplyr::arrange(LabID, db) %>%
+  dplyr::slice(1) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("Long", "Lat"),
+               crs = 4326) %>%
   sf::st_make_valid() %>%
-  sf::st_join(counties10sf)
-
-by_county <- Four_corners %>%
-  dplyr::select(#trim unnecessary variables
-    Age, Error, calib, NAME, REGION) %>%
+  # Join to counties data to get county and state information.
+  sf::st_join(SWUS_counties) %>%
+  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", ")) %>%
+  dplyr::select(LabID,
+                SiteID,
+                SiteName,
+                county_st,
+                NAME,
+                REGION,
+                Taxa,
+                Age,
+                Error,
+                calib) %>%
   sf::st_drop_geometry() %>%
+  suppressMessages()
+
+usethis::use_data(sw_rc,
+                  overwrite = TRUE)
+
+
+# Put data into a nested format in the dataframe, then create the SPDs by county.
+by_county <- sw_rc %>%
+  # Trim unnecessary variables.
+  dplyr::select(Age, Error, calib, NAME, REGION) %>%
+  sf::st_drop_geometry() %>%
+  # Keep only data up to 9000 years old.
   dplyr::filter(Age < 9000) %>%
-  dplyr::group_by(NAME) %>% # group by region
-  dplyr::mutate(n = n()) %>%
-  dplyr::group_by(NAME, REGION, n) %>% # group by region
-  tidyr::nest()
+  # Get total number of samples by name and region.
+  dplyr::add_count(NAME, REGION) %>%
+  # Group by name, region, and n to nest data.
+  dplyr::group_by(NAME, REGION, n) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(spds = purrr::map(data, makeSPD))
 
-by_county$spds <- purrr::map(by_county$data, makeSPD)
-
-by_county2 <- by_county %>%
-  # dplyr::select(-data)
-  mutate(spds = map(
+SPD_county <- by_county %>%
+  dplyr::mutate(spds = purrr::map(
     spds,
-    ~ mutate(
+    ~ dplyr::mutate(
       .x,
       presence = ifelse(PrDens == 0, 0, 1),
-      change = tsibble::difference(presence, default = first(presence)),
-      firstdiff = tsibble::difference(PrDens, default = first(PrDens)),
-      change_words = ifelse(
-        change == 1,
-        "Begin occupation",
-        ifelse(change == -1, "End occupation", 0)
+      change = presence - dplyr::lag(presence, default = 0),
+      firstdiff = PrDens - dplyr::lag(PrDens, default = 0),
+      change_words = dplyr::case_when(
+        change == 1 ~ "Begin occupation",
+        change == -1 ~ "End occupation",
+        TRUE ~ "nothing"
       )
     )
-  ))
+  )) %>%
+  dplyr::mutate(county_st = paste(NAME, REGION, sep = ", "))
 
-by_county_changes <- by_county2 %>%
-  tidyr::unnest(cols = c(spds)) %>%
-  dplyr::filter(change_words != "0")
+usethis::use_data(SPD_county,
+                  overwrite = TRUE)
