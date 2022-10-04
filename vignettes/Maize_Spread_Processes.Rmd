@@ -191,7 +191,7 @@ m <- fields::Tps(xy, z2)
 surface <- raster::interpolate(rast, m)
 
 png(
-  here::here("vignettes/figures/date_map_contour.png"),
+  here::here("vignettes/figures/Figure_1.png"),
   units = "in",
   width = 15.43,
   height = 13.15,
@@ -236,91 +236,7 @@ dev.off()
 
 ```
 
-
-```{r environmental_stats}
-
-MDB_env2 <- MDB_env %>%
-  dplyr::filter(Date < 1500) %>%
-  dplyr::group_by(gr = cut(Date,
-                           breaks = seq(-4500, 1500,500),
-                           labels = seq(-4250, 1250,500))) %>% 
-  dplyr::mutate(date2 = as.numeric(as.character(gr))) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::select(-gr) %>% 
-  dplyr::arrange(date2) %>% 
-  dplyr::rename(Latitude = Lat, Elevation = elevation)
-
-env_summaries <- MDB_env2 %>% 
-  dplyr::summarise(across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
-
-
-env_summaries_bp <-
-  MDB_env2 %>%
-  dplyr::select(date2, Latitude, GDD, Elevation) %>%
-  tidyr::pivot_longer(-date2) %>%
-  ggplot(aes(
-    x = factor(date2),
-    y = value,
-    fill = factor(name)
-  )) +
-  geom_boxplot() +
-  facet_grid(vars(name), scales = "free") +
-  labs(fill = "") +
-  xlab("Years BC/AD") +
-  ylab("Value") +
-  theme_bw() +
-  theme(
-    strip.text.y = element_text(size = 12),
-    legend.key.size = unit(1.5, "cm"),
-    legend.text = element_text(size = 12),
-    axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
-    axis.text = element_text(
-      size = 26,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/env_boxplots.png"),
-  plot = env_summaries_bp,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
-
-
-```
-
-```{r spd}
+```{r Figure_2, fig.cap="Figure 2. SPDs by county with the earliest maize plotted for each county.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 MDB3A <- MDB %>%
   dplyr::filter(Country == "USA") %>%
@@ -386,34 +302,54 @@ by_county_changes <- SPD_county %>%
   # Remove all columns with word site, except for SiteNameID, and remove name and region columns.
   dplyr::select(-c(starts_with("Site", vars = names(.)[stringr::str_detect(names(.), "SiteNameID", negate = TRUE)]), NAME, REGION, LabID)) %>%
   tidyr::unnest(cols = c(spds)) %>%
-  dplyr::mutate(MedianBP = ifelse(MedianBP == calBP, MedianBP, NA),
-                SiteNameID = ifelse(!is.na(MedianBP), SiteNameID, NA)) %>% 
+  dplyr::mutate(
+    MedianBP = ifelse(MedianBP == calBP, MedianBP, NA),
+    SiteNameID = ifelse(!is.na(MedianBP), SiteNameID, NA)
+  ) %>%
   dplyr::mutate(county_st = paste0(county_st, " (n = ", n, ")"))
-  
 
-spd_plot <- ggplot(data = by_county_changes, aes(y = PrDens, x = calBP)) +
+
+spd_plot <-
+  ggplot(data = by_county_changes, aes(y = PrDens, x = calBP)) +
   geom_line() +
-  geom_point(aes(y = PrDens, x = MedianBP), size = 2.75, color = "red", inherit.aes = FALSE) +
-  geom_label_repel(aes(y = PrDens, x = MedianBP, label = SiteNameID), color = "red", cex = 5,
+  geom_point(
+    aes(y = PrDens, x = MedianBP),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  geom_label_repel(
+    aes(y = PrDens, x = MedianBP, label = SiteNameID),
+    color = "red",
+    cex = 5,
     show.legend  = F,
     min.segment.length = unit(0.1, 'lines'),
     box.padding = 1,
     nudge_x = -550,
     nudge_y = 0.35,
     fill = alpha(c("white"), 0.6),
-    label.size=NA) +
+    label.size = NA
+  ) +
   theme_bw() +
   scale_x_reverse(breaks = seq(0, 6000, 1000), limits = c(6000, 0)) +
-  scale_y_continuous(breaks = function(x) seq(0, max(x), length.out = 3),
-                     labels = function(y) sprintf("%.2f", y)) +
-  facet_wrap(~factor(county_st, levels=unique(by_county_changes$county_st)), scales = "free_y", ncol = 1) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.2f", y)
+  ) +
+  facet_wrap( ~ factor(county_st, levels = unique(by_county_changes$county_st)),
+              scales = "free_y",
+              ncol = 1) +
   xlab("Years cal BP") +
   ylab("Summed Probability") +
   theme(
     panel.spacing = unit(1, "lines"),
-    strip.text.x = element_text(size = 16, 
-                                family = "Helvetica",
-                                face = "bold"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
     axis.ticks.length = unit(0.125, "inch"),
     #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
@@ -455,9 +391,8 @@ spd_plot <- ggplot(data = by_county_changes, aes(y = PrDens, x = calBP)) +
 
 spd_plot
 
-
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/spd_plotb.png"),
+  filename = here::here("vignettes/figures/Figure_2.png"),
   plot = spd_plot,
   width = 16,
   height = 18,
@@ -467,7 +402,102 @@ ggplot2::ggsave(
 
 ```
 
+```{r Figure_3, fig.cap="Figure 3. Box plots showing elevation, GDD, and latitude for each sample in our maize database, which includes 1,043 samples) through time (Gillreath-Brown and Kohler n.d. 2022). The samples have been binned into 500 year time slices and plotted on the midpoint of the 500 year time bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
+MDB_env2 <- MDB_env %>%
+  dplyr::filter(Date < 1500) %>%
+  dplyr::group_by(gr = cut(Date,
+                           breaks = seq(-4500, 1500,500),
+                           labels = seq(-4250, 1250,500))) %>% 
+  dplyr::mutate(date2 = as.numeric(as.character(gr))) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(-gr) %>% 
+  dplyr::arrange(date2) %>% 
+  dplyr::rename(Latitude = Lat, Elevation = elevation)
+
+env_summaries <- MDB_env2 %>% 
+  dplyr::summarise(across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
+
+env_summaries_bp <-
+  MDB_env2 %>%
+  dplyr::select(date2, Latitude, GDD, Elevation) %>%
+  tidyr::pivot_longer(-date2) %>%
+  ggplot(aes(
+    x = factor(date2),
+    y = value,
+    fill = factor(name)
+  )) +
+  geom_boxplot() +
+  facet_grid(vars(name), scales = "free") +
+  labs(fill = "") +
+  xlab("Years BC/AD") +
+  ylab("Value") +
+  theme_bw() +
+  theme(
+    strip.text.y = element_text(size = 12),
+    legend.key.size = unit(1.5, "cm"),
+    legend.text = element_text(size = 12),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_3.png"),
+  plot = env_summaries_bp,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+
+```
+
+```{r spd_county_maps}
+
+SW_counties <- tigris::counties(c("Arizona", "New Mexico", "Colorado", "Utah"))
+
+ggplot() +
+  geom_sf(data = SW_counties, color="black",
+                   fill="white", size=0.25)
+
+
+
+```
+
+
+# Exploration Code
 ```{r code_exploration} 
 
 
@@ -763,15 +793,3 @@ out %>%
 
 ```
 
-
-```{r spd_county_maps}
-
-SW_counties <- tigris::counties(c("Arizona", "New Mexico", "Colorado", "Utah"))
-
-ggplot() +
-  geom_sf(data = SW_counties, color="black",
-                   fill="white", size=0.25)
-
-
-
-```
