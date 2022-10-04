@@ -137,17 +137,6 @@ avPlots(fit)
 
 ```
 
-
-```{r}
-
-df <- MDB_env %>%
-  dplyr::filter(Lat > 30)
-
-grid.dist0 <- GSIF::buffer.dist(df["MedianBP"], rast[1], as.factor(1:nrow(df)))
-
-
-```
-
 ```{r environmental_stats}
 
 MDB_env2 <- MDB_env %>%
