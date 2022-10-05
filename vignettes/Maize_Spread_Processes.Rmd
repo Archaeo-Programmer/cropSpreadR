@@ -224,7 +224,7 @@ plot(
   xaxt = 'n',
   yaxt = 'n',
   legend.args = list(
-    text = "         cal BP \n",
+    text = "      Years \n       BC/AD \n",
     side = 3,
     font = 2,
     cex = 1.5
