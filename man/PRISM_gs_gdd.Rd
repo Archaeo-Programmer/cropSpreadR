@@ -3,7 +3,7 @@
 \docType{data}
 \name{PRISM_gs_gdd}
 \alias{PRISM_gs_gdd}
-\title{Growing Season Accumulated Growing Degree Days from PRISM}
+\title{Growing Season Accumulated Growing Degree Days (°C) from PRISM}
 \format{
 An object of class \code{RasterLayer}.
 }
@@ -14,7 +14,7 @@ An object of class \code{RasterLayer}.
 PRISM_gs_gdd
 }
 \description{
-A \code{raster} containing accumulated growing degree days for the growing season (May through September) with a base temperature of 10°C and maximum temperature of 30°C.
+A \code{raster} containing accumulated growing degree days (°C) for the growing season (May through September) with a base temperature of 10°C and maximum temperature of 30°C.
 GDD was calculated from tmin and max 30 seconds (~1 \ifelse{html}{\out{km<sup>2</sup>}}{\eqn{km^2}}).
 }
 \keyword{datasets}
