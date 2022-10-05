@@ -3,12 +3,12 @@
 \docType{data}
 \name{PRISM_gs_gdd}
 \alias{PRISM_gs_gdd}
-\title{Growing Season Accumulated Growing Degree Days from PRISM.}
+\title{Growing Season Accumulated Growing Degree Days from PRISM}
 \format{
 An object of class \code{RasterLayer}.
 }
 \source{
-\url{https://www.worldclim.org/data/worldclim21.html}
+\url{http://www.prism.oregonstate.edu/}
 }
 \usage{
 PRISM_gs_gdd

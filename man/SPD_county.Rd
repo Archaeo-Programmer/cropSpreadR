@@ -3,9 +3,17 @@
 \docType{data}
 \name{SPD_county}
 \alias{SPD_county}
-\title{Summed Probability Distributions for Four Corners Counties.}
+\title{Summed Probability Distributions for Four Corners Counties}
 \format{
 An object of class \code{tbl_df}.
+\describe{
+\item{\code{NAME}}{County of the site from which the sample has been recovered}
+\item{\code{REGION}}{State of the site from which the sample has been recovered}
+\item{\code{n}}{Sample size of radiocarbon dates for each county}
+\item{\code{data}}{Radiocarbon samples in each county as a nested \code{tibble}}
+\item{\code{spds}}{SPDs for each county as an object of class \code{CalGrid}}
+\item{\code{county_st}}{County and state of the site from which the sample has been recovered}
+}
 }
 \usage{
 SPD_county

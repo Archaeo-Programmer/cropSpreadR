@@ -3,7 +3,7 @@
 \docType{data}
 \name{PRISM_annual_gdd}
 \alias{PRISM_annual_gdd}
-\title{Annual Accumulated Growing Degree Days from PRISM.}
+\title{Annual Accumulated Growing Degree Days from PRISM}
 \format{
 An object of class \code{RasterLayer}.
 }

@@ -3,20 +3,9 @@
 \docType{data}
 \name{sw_rc}
 \alias{sw_rc}
-\title{Radiocarbon Data for Four Corners.}
+\title{Radiocarbon Data for Four Corners}
 \format{
-An object of class \code{tbl_df}.
-}
-\source{
-\url{https://github.com/people3k/p3k14c}
-
-\url{https://github.com/Archaeo-Programmer/cropDiffusionR/blob/main/vignettes/tables/tableS1_with_references.xlsx}
-}
-\usage{
-sw_rc
-}
-\description{
-A \code{data.frame} containing radiocarbon data for the Four Corners. Data was combined from \code{p3k14c} with \code{cropDiffusionR}.
+An object of class \code{tbl_df} with the following variables:
 \describe{
 \item{\code{LabID}}{Lab ID of each radiocarbon date}
 \item{\code{SiteID}}{ID of the site from which the sample has been recovered}
@@ -29,5 +18,16 @@ A \code{data.frame} containing radiocarbon data for the Four Corners. Data was c
 \item{\code{Error}}{Radiocarbon age error}
 \item{\code{calib}}{Calibration curve to be used to calibrate the Age}
 }
+}
+\source{
+\url{https://github.com/people3k/p3k14c}
+
+\url{https://github.com/Archaeo-Programmer/cropDiffusionR/blob/main/vignettes/tables}
+}
+\usage{
+sw_rc
+}
+\description{
+A \code{data.frame} containing radiocarbon data for the Four Corners. \code{p3k14c} data was combined with \code{cropDiffusionR}.
 }
 \keyword{datasets}

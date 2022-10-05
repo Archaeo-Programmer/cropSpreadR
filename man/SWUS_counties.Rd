@@ -3,7 +3,7 @@
 \docType{data}
 \name{SWUS_counties}
 \alias{SWUS_counties}
-\title{Four Corners County Shapefiles.}
+\title{Four Corners County Shapefiles}
 \format{
 An object of class \code{sfc_POLYGON}.
 }
@@ -14,6 +14,6 @@ An object of class \code{sfc_POLYGON}.
 SWUS_counties
 }
 \description{
-A \code{sf} \code{data.frame} containing county shapefiles for Arizona, Colorado, New Mexico, and Utah.
+An \code{sf} \code{data.frame} containing county polygons for Arizona, Colorado, New Mexico, and Utah.
 }
 \keyword{datasets}
