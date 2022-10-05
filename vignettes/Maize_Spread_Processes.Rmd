@@ -105,7 +105,7 @@ mlr <- MDB_env %>%
     breaks = seq(-3700, 1500, 100))) %>% 
   dplyr::group_by(bin) %>% 
   dplyr::mutate(group = dplyr::cur_group_id()) %>% 
-  #dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>% 
+  dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>% 
   dplyr::ungroup()
 
 fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
