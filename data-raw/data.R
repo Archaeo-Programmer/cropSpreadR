@@ -22,17 +22,15 @@ MDB_SWUS <- MDB_tmp %>%
   dplyr::select(-Country)
 
 # Read in National Elevation dataset.
-swus_NED <-
-  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif")
+swus_NED1 <- raster::raster(stringr::str_remove(here::here("datasets/UUSS_NED_1.tif"),
+                                               "cropSpreadR/"))
 
 # Set projection
-raster::crs(swus_NED) <- "EPSG:4326"
+raster::crs(swus_NED1) <- "EPSG:4326"
 
-usethis::use_data(swus_NED,
-                  overwrite = TRUE)
-
+# Extract elevation data for each site.
 MDB_SWUS_elev <-
-  data.frame(MDB_SWUS, elevation = terra::extract(x = NED, y = MDB_SWUS))
+  data.frame(MDB_SWUS, elevation = terra::extract(x = swus_NED1, y = MDB_SWUS))
 
 # Get elevation at site locations for Mexico sites.
 MDB_Mexico <- MDB_tmp %>%
@@ -61,7 +59,21 @@ MDB_elev <- dplyr::bind_rows(MDB_SWUS_elev, MDB_Mexico_elev)
 usethis::use_data(MDB_elev,
                   overwrite = TRUE)
 
+# Save the transformed NED data to save time in plotting.
+# Decrease spatial resolution for plotting.
+# swus_NED <- raster::aggregate(swus_NED1, fact = 11)
+# Crop and mask to fit the Four Corner States
+# swus_NED <-
+#   raster::crop(swus_NED, cropDiffusionR::swus_states)
+# swus_NED <-
+#   raster::mask(swus_NED, cropDiffusionR::swus_states)
+# Write this raster to data-raw, then can just read in.
+# raster::writeRaster(swus_NED, filename = here::here("data-raw/swus_NED.tif"))
 
+swus_NED <- raster::raster(here::here("data-raw/swus_NED.tif"))
+
+usethis::use_data(swus_NED,
+                  overwrite = TRUE)
 
 # Get annual accumulated GDD.
 # Calculate average days per month during 1970-2000.
