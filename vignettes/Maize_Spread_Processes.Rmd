@@ -41,7 +41,7 @@ temp_anom <-
     se = 4
   )
 
-# Load location data for each sample. Site location are not saved in this repository, as we want to ensure that archaeological site locations are protected. %>% str_remove("project_root/")
+# Load location data for each sample. Site locations are not saved in this repository, as we want to ensure that archaeological site locations are protected.
 sf::sf_use_s2(FALSE)
 
 MDB <- cropDiffusionR::maizeDB %>%
@@ -66,23 +66,25 @@ MDB <- cropDiffusionR::maizeDB %>%
   sf::st_drop_geometry() %>% 
   suppressMessages()
 
-# Get modern annual accumulated growing degree days at each sample location. We use WorldClim 30 sec. (~1 km) for Mexico and use PRISM (~800 meters) for USA.
+# Get modern annual accumulated growing degree days at each sample location. 
+# For Mexico, we use WorldClim 30 sec. (~1 km) for GDD data.
 MDB_gdd_wc <- MDB %>%
   sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
   dplyr::select(LabID) %>%
   cropDiffusionR::extract_GDD(gdd_raster = cropDiffusionR::WorldClim_annual_gdd,
                               sites = .)
 
+# For USA, we use PRISM (~800 meters) for GDD data.
 MDB_gdd_prism <- MDB %>%
   sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
   dplyr::select(LabID) %>%
   cropDiffusionR::extract_GDD(gdd_raster = cropSpreadR::PRISM_annual_gdd,  sites = .)
 
+# Join the GDD together.
 MDB_gdd <-
   dplyr::left_join(MDB_gdd_prism, MDB_gdd_wc, by = "LabID") %>%
   dplyr::mutate(GDD = dplyr::coalesce(GDD.x, GDD.y)) %>%
   dplyr::select(-c(GDD.x, GDD.y))
-
 
 # Add GDD and elevation to maize dataset.
 MDB_env <- MDB %>%
@@ -92,9 +94,9 @@ MDB_env <- MDB %>%
   dplyr::left_join(., cropSpreadR::MDB_elev, by = "LabID")
 
 
-MDB3 <- MDB %>%
-  dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah"))
+```
 
+```{r multi_regression}
 
 mlr <- MDB_env %>%
   dplyr::group_by(SiteIDName) %>%
@@ -133,9 +135,7 @@ library(car)
 #produce added variable plots
 avPlots(fit)
 
-
 ```
-
 
 ```{r Figure_1, fig.cap="Figure 1. TPS of earliest maize at each site.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
@@ -486,12 +486,73 @@ ggplot2::ggsave(
 
 ```{r spd_county_maps}
 
-SW_counties <- tigris::counties(c("Arizona", "New Mexico", "Colorado", "Utah"))
+# Get sites that are on the northern maize frontier through time from cropDiffusionR package.
+temp <- tempfile()
+download.file(
+  "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_swus.rds",
+  temp
+)
+maize_frontier_swus <-
+  readr::read_rds(temp, "maize_frontier_swus.rds") %>% 
+  dplyr::left_join(., MDB %>% dplyr::select(LabID, Long, Lat), by = "LabID")
+unlink(temp)
 
-ggplot() +
-  geom_sf(data = SW_counties, color="black",
-                   fill="white", size=0.25)
+# Create new column for fill, which will be used for plotting. Grey if the county occurs on the maize northern frontier, and blank if it does not.
+SWUS_counties_fill <- SWUS_counties %>% 
+  dplyr::mutate(fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
+                label = ifelse(county_st %in% maize_frontier_swus$county_st, tools::toTitleCase(NAME), NA))
 
+# Plot.
+spd_counties <- ggplot(data = SWUS_counties_fill) +
+  geom_sf(
+    color = "black",
+    fill = SWUS_counties_fill$fill,
+    size = 0.25
+  ) +
+    ggrepel::geom_label_repel(
+    aes(label = label, geometry = geom),
+    stat = "sf_coordinates",
+    min.segment.length = 0.1,
+    size = 8
+  ) +
+  #   geom_label_repel(
+  #   aes(y = PrDens, x = MedianBP, label = SiteNameID),
+  #   color = "red",
+  #   cex = 5,
+  #   show.legend  = F,
+  #   min.segment.length = unit(0.1, 'lines'),
+  #   box.padding = 1,
+  #   nudge_x = -550,
+  #   nudge_y = 0.35,
+  #   fill = alpha(c("white"), 0.6),
+  #   label.size = NA
+  # ) +
+  coord_sf() +
+  theme_bw() +
+  theme(
+    legend.position = c(.15, .2),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 15, family = "Helvetica"),
+    legend.title = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    )
+  )
+  
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/spd_counties.png"),
+  plot = spd_counties,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
 
 
 ```
