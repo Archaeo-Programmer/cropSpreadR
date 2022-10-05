@@ -16,6 +16,14 @@
 #' @source \url{http://www.prism.oregonstate.edu/}
 "PRISM_gs_gdd"
 
+#' National Elevation Dataset for Southwestern United States
+#'
+#' @description A `raster` containing elevation data for the Southwestern United States.
+#'
+#' @format An object of class `RasterLayer`.
+#' @source \url{https://ned.usgs.gov/}
+"swus_NED"
+
 #' Four Corners County Shapefiles
 #'
 #' @description An `sf` `data.frame` containing county polygons for Arizona, Colorado, New Mexico, and Utah.

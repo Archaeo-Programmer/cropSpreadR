@@ -22,11 +22,14 @@ MDB_SWUS <- MDB_tmp %>%
   dplyr::select(-Country)
 
 # Read in National Elevation dataset.
-NED <-
+swus_NED <-
   raster::raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif")
 
 # Set projection
-raster::crs(NED) <- "EPSG:4326"
+raster::crs(swus_NED) <- "EPSG:4326"
+
+usethis::use_data(swus_NED,
+                  overwrite = TRUE)
 
 MDB_SWUS_elev <-
   data.frame(MDB_SWUS, elevation = terra::extract(x = NED, y = MDB_SWUS))
