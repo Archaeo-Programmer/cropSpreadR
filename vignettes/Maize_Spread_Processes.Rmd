@@ -251,6 +251,37 @@ maps::map(
 
 dev.off()
 
+
+# Supplemental figure that just has the contour lines.
+# Need to re-run code above so that it uses MedianBP instead of Date. 
+# Also, for df_clus, you will need to use slice_max for MedianBP instead of slice_min (which is used for Date).
+png(
+  here::here("vignettes/figures/Supp_Figure_contour.png"),
+  units = "in",
+  width = 15.43,
+  height = 13.15,
+  res = 600
+)
+
+contour(
+  surface,
+  asp = NA,
+  add = FALSE,
+  labcex = 1.1,
+  xaxt = 'n',
+  yaxt = 'n',
+  vfont = c("sans serif", "bold")
+)
+maps::map(
+  'state',
+  add = TRUE,
+  lwd = 1.5,
+  lty = 1,
+  col = "grey28"
+)
+
+dev.off()
+
 ```
 
 ```{r Figure_2, fig.cap="Figure 2. SPDs by county with the earliest maize plotted for each county.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
