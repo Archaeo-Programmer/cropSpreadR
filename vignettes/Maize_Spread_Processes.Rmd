@@ -780,7 +780,105 @@ ggplot2::ggsave(
 
 ```{r maize_frontier, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
-maize_frontier_swus
+nodes1 <-
+  maize_frontier_swus %>%
+  dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName)) %>%
+  dplyr::arrange(Date) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  dplyr::select(id, Long, Lat, SiteName, Date) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(delta = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
+                delta = as.numeric(sprintf("%.5f", delta))) %>%
+  dplyr::mutate(normal = (delta-min(delta, na.rm = T))/(max(delta, na.rm = T)-min(delta, na.rm = T))) %>%
+  dplyr::arrange(normal)
+
+nodes1_rev <- nodes1 %>%
+  dplyr::arrange(desc(normal))
+
+nodes1$normal <- nodes1_rev$normal
+
+names(nodes1) <- c("id", "lon", "lat", "name", "date", "delta", "normal")
+
+nodes1 <- nodes1 %>%
+  dplyr::arrange(id)
+
+edges1 <- data.frame(from = 1:12,
+                     to = 2:13,
+                     weight = nodes1$normal[!is.na(nodes1$normal)],
+                     color = nodes1$delta[!is.na(nodes1$delta)])
+
+g1 <- graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
+
+edges_for_plot1 <- edges1 %>%
+  inner_join(nodes1 %>% select(id, lon, lat), by = c('from' = 'id')) %>%
+  rename(x = lon, y = lat) %>%
+  inner_join(nodes1 %>% select(id, lon, lat), by = c('to' = 'id')) %>%
+  rename(xend = lon, yend = lat)
+assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+country_shapes1 <- geom_polygon(aes(x = long, y = lat, group = group),
+                                data = map_data('state'),
+                                fill = "white", color = "black",
+                                size = 0.15)
+mapcoords1 <- coord_fixed(xlim = c(-114.814521, -104.062648), ylim = c(31.333254, 42.001167))
+
+k <- ggplot(nodes1) +
+  country_shapes1 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      size = color,
+      color = color
+    ),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 0.5
+  ) +
+  scale_color_continuous(name = "Degrees/Year", breaks=seq(min(edges_for_plot1$color), max(edges_for_plot1$color), length.out = 5),
+                         labels = sprintf("%.5f", seq(min(edges_for_plot1$color), max(edges_for_plot1$color), length.out = 5)),
+                         type = "viridis") +
+  scale_size_continuous(name = "Degrees/Year",
+                        breaks=seq(min(edges_for_plot1$color), max(edges_for_plot1$color), length.out = 5),
+                        labels = sprintf("%.5f", seq(min(edges_for_plot1$color), max(edges_for_plot1$color), length.out = 5))) +    # scale for node size
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 5.5,
+    color = "black",
+    min.segment.length = 0.2,
+    fill = alpha(c("white"), 0.7),
+    force = 20,
+    nudge_x = -0.3,
+    family = "Helvetica"
+  ) +
+  guides(color= guide_legend(), size=guide_legend()) +
+  mapcoords1 +
+  ggthemes::theme_map() +
+  theme(legend.position = c(0.805, 0.76),
+        legend.key.size = unit(0.95, "cm"),
+        legend.text = element_text(size = 19, family = "Helvetica"),
+        legend.title = element_text(size = 21, face = "bold", family = "Helvetica"))
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/spread_rate.png"),
+  plot = k,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
 
 
 ```
