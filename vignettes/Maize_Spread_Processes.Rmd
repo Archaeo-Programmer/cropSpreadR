@@ -93,7 +93,7 @@ MDB_env <- MDB %>%
   # Add elevation to dataset.
   dplyr::left_join(., cropSpreadR::MDB_elev, by = "LabID")
 
-# Get sites that are on the northern maize frontier through time from cropDiffusionR package.
+# Get sites that are on the northern maize frontier through time from cropDiffusionR package for the SWUS.
 temp <- tempfile()
 download.file(
   "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_swus.rds",
@@ -110,6 +110,26 @@ maize_frontier_swus <- MDB %>%
   sf::st_as_sf(coords = c("Long1", "Lat1"),
                crs = 4326) %>%
   sf::st_make_valid()
+
+# Get sites that are on the northern maize frontier through time from cropDiffusionR package for Mexico and SWUS.
+temp <- tempfile()
+download.file(
+  "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_mexico.rds",
+  temp
+)
+maize_frontier_mexico <-
+  readr::read_rds(temp, "maize_frontier_mexico.rds")
+unlink(temp)
+
+maize_frontier_mexico <- MDB %>%
+  dplyr::filter(LabID %in% maize_frontier_mexico$LabID) %>%
+  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("Long1", "Lat1"),
+               crs = 4326) %>%
+  sf::st_make_valid() %>% 
+  dplyr::mutate(centroid_long = ifelse(is.na(centroid_long), Long, centroid_long),
+                centroid_lat = ifelse(is.na(centroid_lat), Lat, centroid_lat))
 
 ```
 
@@ -151,6 +171,80 @@ library(car)
 
 #produce added variable plots
 avPlots(fit)
+
+leveragePlots(fit)
+
+added_variable_plots <- mlr
+
+model_wt_and_disp <- lm(Date ~ Lat + GDD + elevation, data = mlr)
+
+model_lat <- lm(Date ~ Lat, data = added_variable_plots)
+added_variable_plots$lat_residuals <- residuals(model_lat) 
+
+model_gdd <- lm(Date ~ GDD, data = added_variable_plots)
+added_variable_plots$gdd_residuals <- residuals(model_gdd) 
+
+model_elev <- lm(Date ~ elevation, data = added_variable_plots)
+added_variable_plots$elev_residuals <- residuals(model_elev)
+
+model_gdd_elev_against_Lat <- lm(GDD + elevation ~ Lat, data = added_variable_plots)
+added_variable_plots$gdd_elev_against_Lat_residuals <- residuals(model_gdd_elev_against_Lat)
+
+model_lat_elev_against_gdd <- lm(Lat + elevation ~ GDD, data = added_variable_plots)
+added_variable_plots$lat_elev_against_gdd_residuals <- residuals(model_lat_elev_against_gdd)
+
+model_lat_gdd_against_elev <- lm(Lat + GDD ~ elevation, data = added_variable_plots)
+added_variable_plots$lat_gdd_against_elev_residuals <- residuals(model_lat_gdd_against_elev)
+
+one <- ggplot(added_variable_plots, aes(x = gdd_elev_against_Lat_residuals, y = lat_residuals)) +
+  geom_point() + geom_smooth(method = 'lm', color = '#e76254') +
+    labs(title = "Mtcars", subtitle = "Parial Regression: mpg ~ wt + disp") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(caption = "holding Lat constant") +
+  xlab("GDD + Elevation \n (gdd_elev_against_Lat_residuals)") +
+  ylab("Latitude \n (lat_residuals)")
+
+two <- ggplot(added_variable_plots, aes(x = lat_elev_against_gdd_residuals, y = gdd_residuals)) +
+  geom_point() + geom_smooth(method = 'lm', color = '#ef8a47') +
+  labs(title = "Mtcars", subtitle = "Parial Regression: mpg ~ wt + disp") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(caption = "holding GDD constant") +
+  xlab("Latitude + Elevation \n (lat_elev_against_gdd_residuals)") +
+  ylab("GDD \n (gdd_residuals)")
+
+
+three <- ggplot(added_variable_plots, aes(x = lat_gdd_against_elev_residuals, y = elev_residuals)) +
+  geom_point() + geom_smooth(method = 'lm', color = '#ef8a47') +
+  labs(title = "Mtcars", subtitle = "Parial Regression: mpg ~ wt + disp") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(caption = "holding elevation constant") +
+  xlab("Latitude + GDD \n (lat_gdd_against_elev_residuals)") +
+  ylab("Elevation \n (gdd_residuals)")
+
+library(patchwork)
+one + two + three
+
+library(ggplot2)
+library(gridExtra)
+
+mod <- fit
+
+p1 <- qplot(.fitted, .resid, data = mod) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(se = FALSE)
+
+p2 <- qplot(sample =.stdresid, data = mod, stat = "qq") + geom_abline()
+
+p3 <- qplot(.fitted, sqrt(abs(.stdresid)), data = mod) + geom_smooth(se = FALSE)
+
+p4 <- qplot(.hat, .stdresid, data = mod) + geom_smooth(se = FALSE)
+
+
+grid.arrange(p1,p2,p3,p4)
+
 
 ```
 
@@ -782,7 +876,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r maize_frontier, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r maize_frontier_SW, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
   maize_frontier_swus %>%
@@ -792,7 +886,7 @@ nodes1 <-
   dplyr::select(id, Long, Lat, SiteName, Date) %>%
   sf::st_drop_geometry() %>%
   dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
-                delta = as.numeric(sprintf("%.5f", delta))) %>% 
+                delta = as.numeric(sprintf("%.2f", delta))) %>% 
   # dplyr::mutate(delta = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
   #               delta = as.numeric(sprintf("%.5f", delta))) %>%
   dplyr::mutate(normal = (delta - min(delta, na.rm = T)) / (max(delta, na.rm = T) -
@@ -836,8 +930,10 @@ country_shapes1 <-
     size = 0.15
   )
 mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-104.062648),
-                       ylim = c(31.333254, 42.001167))
+  ggplot2::coord_fixed(xlim = c(-114.814521,-106),
+                       ylim = c(31.333254, 42))
+
+legend.breaks = 4
 
 k <- ggplot(nodes1) +
   country_shapes1 +
@@ -856,30 +952,30 @@ k <- ggplot(nodes1) +
     alpha = 1.0
   ) +
   scale_color_continuous(
-    name = "km/year",
+    name = "\u0394 km/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
-      length.out = 5
+      length.out = legend.breaks
     ),
-    labels = sprintf("%.5f", seq(
+    labels = sprintf("%.2f", seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
-      length.out = 5
+      length.out = legend.breaks
     )),
     type = "viridis"
   ) +
   scale_size_continuous(
-    name = "km/year",
+    name = "\u0394 km/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
-      length.out = 5
+      length.out = legend.breaks
     ),
-    labels = sprintf("%.5f", seq(
+    labels = sprintf("%.2f", seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
-      length.out = 5
+      length.out = legend.breaks
     ))
   ) +    # scale for node size
   geom_point(
@@ -907,7 +1003,7 @@ k <- ggplot(nodes1) +
   mapcoords1 +
   ggthemes::theme_map() +
   theme(
-    legend.position = c(0.805, 0.76),
+    legend.position = c(0.819, 0.797),
     legend.key.size = unit(0.95, "cm"),
     legend.text = element_text(size = 19, family = "Helvetica"),
     legend.title = element_text(
@@ -928,8 +1024,190 @@ ggplot2::ggsave(
 
 ```
 
+```{r maize_frontier_mexico, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+nodes1 <-
+  maize_frontier_mexico %>%
+  dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
+                SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)) %>%
+  dplyr::arrange(Date) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  dplyr::select(id, Long, Lat, SiteName, Date) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+                delta = as.numeric(sprintf("%.2f", delta))) %>% 
+  # dplyr::mutate(delta = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
+  #               delta = as.numeric(sprintf("%.5f", delta))) %>%
+  dplyr::mutate(normal = (delta - min(delta, na.rm = T)) / (max(delta, na.rm = T) -
+                                                              min(delta, na.rm = T))) %>%
+  dplyr::arrange(normal)
+
+nodes1_rev <- nodes1 %>%
+  dplyr::arrange(desc(normal))
+
+nodes1$normal <- nodes1_rev$normal
+
+names(nodes1) <-
+  c("id", "lon", "lat", "name", "date", "delta", "normal")
+
+nodes1 <- nodes1 %>%
+  dplyr::arrange(id)
+
+edges1 <- data.frame(
+  from = 1:13,
+  to = 2:14,
+  weight = nodes1$normal[!is.na(nodes1$normal)],
+  color = nodes1$delta[!is.na(nodes1$delta)]
+)
+
+g1 <-
+  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
+
+edges_for_plot1 <- edges1 %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
+  dplyr::rename(x = lon, y = lat) %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
+  dplyr::rename(xend = lon, yend = lat)
+assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+country_shapes1 <-
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('world'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+country_shapes2 <- 
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('state'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+mapcoords1 <-
+  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
+                       ylim = c(14.72716, 42.001167))
+
+legend.breaks = 4
+
+k <- ggplot(nodes1) +
+  country_shapes1 +
+  country_shapes2 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      size = color,
+      color = color
+    ),
+    arrow = arrow(length = unit(0.03, "npc"), type = "closed"),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 1.0
+  ) +
+  scale_color_continuous(
+    name = "\u0394 km/year",
+    breaks = seq(
+      min(edges_for_plot1$color),
+      max(edges_for_plot1$color),
+      length.out = legend.breaks
+    ),
+    labels = sprintf("%.2f", seq(
+      min(edges_for_plot1$color),
+      max(edges_for_plot1$color),
+      length.out = legend.breaks
+    )),
+    type = "viridis"
+  ) +
+  scale_size_continuous(
+    name = "\u0394 km/year",
+    breaks = seq(
+      min(edges_for_plot1$color),
+      max(edges_for_plot1$color),
+      length.out = legend.breaks
+    ),
+    labels = sprintf("%.2f", seq(
+      min(edges_for_plot1$color),
+      max(edges_for_plot1$color),
+      length.out = legend.breaks
+    ))
+  ) +    # scale for node size
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  ggrepel::geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 5,
+    color = "black",
+    min.segment.length = 0.25,
+    fill = alpha(c("white"), 0.7),
+    force = 27,
+    nudge_x = -0.51,
+    nudge_y = 0.15,
+    family = "Helvetica"
+  ) +
+  guides(color = guide_legend(), size = guide_legend()) +
+  mapcoords1 +
+  ggthemes::theme_map() +
+  theme(
+    plot.margin=grid::unit(c(0.25,0.25,0.25,0.25), "mm"),
+    legend.position = c(0.823, 0.8015),
+    legend.key.size = unit(0.95, "cm"),
+    legend.text = element_text(size = 19, family = "Helvetica"),
+    legend.title = element_text(
+      size = 21,
+      face = "bold",
+      family = "Helvetica"
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/spread_rate_mexico.png"),
+  plot = k,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+
+```
+
 # Exploration Code
 ```{r code_exploration} 
+
+maize_frontier_mexico %>% 
+  
+
+
+# Getting spread rates.
+tv_bc <- MDB %>%
+  dplyr::filter(SiteName %in% c("San Marcos", "Bat Cave")) %>%
+  dplyr::group_by(SiteName) %>%
+  dplyr::slice_min(Date) %>% 
+  dplyr::select(Long, Lat, SiteName, Date)
+
+tv_bc %>% 
+  ungroup() %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::mutate(Date = c(-3000, -2000)) %>% 
+  dplyr::mutate(delta_lat = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+                delta_lat = as.numeric(sprintf("%.2f", delta_lat))) %>% 
+  dplyr::mutate(delta_deg = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
+                delta_deg = as.numeric(sprintf("%.5f", delta_deg)))
+
+
+
 
 
 library(tidyverse)
