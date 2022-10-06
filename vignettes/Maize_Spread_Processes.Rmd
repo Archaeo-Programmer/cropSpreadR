@@ -144,11 +144,33 @@ mlr <- MDB_env %>%
     breaks = seq(-3700, 1500, 100))) %>% 
   dplyr::group_by(bin) %>% 
   dplyr::mutate(group = dplyr::cur_group_id()) %>% 
-  dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>% 
+  #dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>% 
   dplyr::ungroup()
 
 fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
 summary(fit)
+
+#load car package
+library(car)
+
+#produce added variable plots
+avPlots(fit)
+
+leveragePlots(fit)
+
+mlr %>%
+  dplyr::select(Date, Lat, GDD, elevation) %>%
+  ggplot(aes(Date, elevation)) +
+  geom_smooth(
+    method = 'lm',
+    formula = y ~ x,
+    se = T,
+    fullrange = TRUE
+    #aes(color = name)
+  ) +
+  #scale_x_reverse() +
+  geom_point()
+
 
 mlr %>%
   dplyr::select(Date, Lat, GDD, elevation) %>%
@@ -165,14 +187,6 @@ mlr %>%
   #scale_x_reverse() +
   geom_point() +
   facet_wrap(vars(name), scales = "free")
-
-#load car package
-library(car)
-
-#produce added variable plots
-avPlots(fit)
-
-leveragePlots(fit)
 
 added_variable_plots <- mlr
 
