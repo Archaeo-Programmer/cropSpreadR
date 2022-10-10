@@ -946,7 +946,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-106),
                        ylim = c(31.333254, 42))
 
-legend.breaks = 4
+legend.breaks = 5
 
 maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
@@ -977,7 +977,7 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
       length.out = legend.breaks
     )),
        palette = "RdYlGn",
-   direction="horizontal"
+   direction = "horizontal"
   ) +
   scale_size_continuous(
     name = "\u0394 km N/year",
@@ -1017,7 +1017,7 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
   mapcoords1 +
   ggthemes::theme_map() +
   theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    legend.position = c(0.778, 0.792),
+    legend.position = c(0.777, 0.752),
     legend.key.size = unit(0.95, "cm"),
     legend.text = element_text(size = 19, family = "Helvetica"),
     legend.title = element_text(
@@ -1051,7 +1051,7 @@ nodes1 <-
   dplyr::mutate(id = dplyr::row_number()) %>%
   dplyr::select(id, Long, Lat, SiteName, Date) %>%
   dplyr::mutate(
-    lead_row = geometry[row_number() + 1],
+    lead_row = geometry[dplyr::row_number() + 1],
     dist_deg = as.numeric(dplyr::lag(
       sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
     )),
@@ -1108,7 +1108,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-105),
                        ylim = c(31.333254, 42))
 
-legend.breaks = 4
+legend.breaks = 5
 
 maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
   country_shapes1 +
@@ -1127,7 +1127,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
     alpha = 1.0
   ) +
   scale_color_distiller(
-    name = "\u0394 km euclidean/year",
+    name = "\u0394 km ED/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
@@ -1142,7 +1142,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
    direction="horizontal"
   ) +
   scale_size_continuous(
-    name = "\u0394 km euclidean/year",
+    name = "\u0394 km ED/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
@@ -1179,7 +1179,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
   mapcoords1 +
   ggthemes::theme_map() +
   theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    legend.position = c(0.675, 0.791),
+    legend.position = c(0.777, 0.752),
     legend.key.size = unit(0.95, "cm"),
     legend.text = element_text(size = 19, family = "Helvetica"),
     legend.title = element_text(
@@ -1266,7 +1266,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
-legend.breaks = 4
+legend.breaks = 5
 
 maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
@@ -1339,7 +1339,7 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   ggthemes::theme_map() +
   theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
     plot.margin=grid::unit(c(0.25,0.25,0.25,0.25), "mm"),
-    legend.position = c(0.823, 0.8015),
+    legend.position = c(0.783, 0.758),
     legend.key.size = unit(0.95, "cm"),
     legend.text = element_text(size = 19, family = "Helvetica"),
     legend.title = element_text(
@@ -1372,7 +1372,7 @@ nodes1 <-
   dplyr::mutate(id = dplyr::row_number()) %>%
   dplyr::select(id, Long, Lat, SiteName, Date) %>%
   dplyr::mutate(
-    lead_row = geometry[row_number() + 1],
+    lead_row = geometry[dplyr::row_number() + 1],
     dist_deg = as.numeric(dplyr::lag(
       sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
     )),
@@ -1437,7 +1437,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
-legend.breaks = 4
+legend.breaks = 5
 
 maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   country_shapes1 +
@@ -1457,7 +1457,7 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
     alpha = 1.0
   ) +
   scale_color_distiller(
-    name = "\u0394 km euclidean/year",
+    name = "\u0394 km ED/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
@@ -1473,7 +1473,7 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
     
   ) +
   scale_size_continuous(
-    name = "\u0394 km euclidean/year",
+    name = "\u0394 km ED/year",
     breaks = seq(
       min(edges_for_plot1$color),
       max(edges_for_plot1$color),
@@ -1511,7 +1511,7 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   ggthemes::theme_map() +
   theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
     plot.margin=grid::unit(c(0.25,0.25,0.25,0.25), "mm"),
-    legend.position = c(0.646, 0.794),
+    legend.position = c(0.76, 0.757),
     legend.key.size = unit(0.95, "cm"),
     legend.text = element_text(size = 19, family = "Helvetica"),
     legend.title = element_text(
@@ -1545,7 +1545,8 @@ ggpubr::ggexport(
     maize_frontier_mexico_euclidean_dist,
     labels = c("A", "B", "C", "D"),
     ncol = 2,
-    nrow = 2
+    nrow = 2,
+    align = "v"
   ),
   filename = here::here("vignettes/figures/spread_rate_ALL.png"),
   width = 18.51,
@@ -1558,29 +1559,39 @@ ggpubr::ggexport(
 
 
 # Exploration Code
-```{r code_exploration} 
+```{r code_exploration}
 
-maize_frontier_mexico %>% 
-  
-
-
-# Getting spread rates.
+# Getting spread rates between random sites.
 tv_bc <- MDB %>%
-  dplyr::filter(SiteName %in% c("San Marcos", "Bat Cave")) %>%
+  dplyr::filter(SiteName %in% c("Guila Naquitz", "Las Capas")) %>%
   dplyr::group_by(SiteName) %>%
-  dplyr::slice_min(Date) %>% 
-  dplyr::select(Long, Lat, SiteName, Date)
+  dplyr::slice_min(Date) %>%
+  dplyr::select(Long, Lat, SiteName, Date) %>%
+  dplyr::ungroup()
 
-tv_bc %>% 
-  ungroup() %>% 
-  dplyr::arrange(Date) %>% 
-  dplyr::mutate(Date = c(-3000, -2000)) %>% 
-  dplyr::mutate(delta_lat = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
-                delta_lat = as.numeric(sprintf("%.2f", delta_lat))) %>% 
-  dplyr::mutate(delta_deg = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
-                delta_deg = as.numeric(sprintf("%.5f", delta_deg)))
-
-
+tv_bc_out <- tv_bc %>%
+  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+  sf::st_as_sf(coords = c("Long1", "Lat1")) %>%
+  dplyr::arrange(Date) %>%
+  # dplyr::mutate(delta_lat = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+  #               delta_lat = as.numeric(sprintf("%.2f", delta_lat))) %>%
+  # dplyr::mutate(delta_deg = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
+  #               delta_deg = as.numeric(sprintf("%.5f", delta_deg))) %>%
+  dplyr::mutate(
+    lead_row = geometry[dplyr::row_number() + 1],
+    dist_deg = as.numeric(dplyr::lag(
+      sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
+    )),
+    dist_km = dist_deg * 110.574,
+    delta_deg = dist_deg / (Date - dplyr::lag(Date)),
+    delta_km = dist_km / (Date - dplyr::lag(Date)),
+    delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)),
+    delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)),
+    delta_lat_km = delta_lat_deg * 110.574
+  ) %>%
+  dplyr::select(-lead_row) %>%
+  sf::st_drop_geometry() %>%
+  suppressWarnings()
 
 
 
