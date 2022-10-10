@@ -727,6 +727,19 @@ NASW_gdd_data_transformed <-
     output_names = c("x", "y")
   )
 
+maize_frontier_swus_tp <- maize_frontier_swus %>%
+  dplyr::bind_rows(
+    .,
+    MDB %>%
+      dplyr::filter(SiteName == "Turkey Pen Ruin") %>%
+      dplyr::slice_min(Date) %>%
+      dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+      # Convert to spatial object
+      sf::st_as_sf(coords = c("Long1", "Lat1"),
+                   crs = 4326) %>%
+      sf::st_make_valid()
+  )
+
 GDD_output <- ggplot2::ggplot(data = NASW_gdd_data_transformed) +
   geom_raster(aes(x = long, y = lat, fill = GDD),
               alpha = 0.8,
@@ -756,13 +769,13 @@ scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, 
     inherit.aes = FALSE
   ) +
   geom_sf(
-    data = maize_frontier_swus,
+    data = maize_frontier_swus_tp,
     aes(geometry = geometry),
     inherit.aes = FALSE,
     size = 4
   ) +
   ggrepel::geom_label_repel(
-    data = maize_frontier_swus,
+    data = maize_frontier_swus_tp,
     aes(label = SiteName, geometry = geometry),
     stat = "sf_coordinates",
     min.segment.length = 0.4,
@@ -834,13 +847,13 @@ scale_fill_gradientn(colors = grDevices::colorRampPalette(MetBrewer::met.brewer(
     inherit.aes = FALSE
   ) +
   geom_sf(
-    data = maize_frontier_swus,
+    data = maize_frontier_swus_tp,
     aes(geometry = geometry),
     inherit.aes = FALSE,
     size = 4
   ) +
   ggrepel::geom_label_repel(
-    data = maize_frontier_swus,
+    data = maize_frontier_swus_tp,
     aes(label = SiteName, geometry = geometry),
     stat = "sf_coordinates",
     min.segment.length = 0.4,
