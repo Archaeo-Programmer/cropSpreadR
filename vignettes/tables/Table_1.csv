@@ -1,0 +1,15 @@
+﻿Lab ID,Site Name,County,State,Country,Date,Age,Error,Median BP,GDD,Elevation,Euclidean Distance (Degrees),Euclidean Distance (km),Δ Degrees Euclidean Distance/Year,Δ km Euclidean Distance/Year,Δ Degrees North/Year,Δ km North/Year
+Beta-132510,Guilá Naquitz,NA,Oaxaca,Mexico,-4277,5410,40,6226,3471,1935,NA,NA,NA,NA,NA,NA
+Beta-344171,Las Capas,Pima,Arizona,USA,-3694,4930,30,5643,3797,670,21.25,2350.04,0.0365,4.03,0.0264,2.92
+Beta-185023,Old Corn,Catron,New Mexico,USA,-2256,3810,50,4205,1939,1909,3.07,339.92,0.0021,0.24,0.0015,0.17
+Beta-26275,Three Fir Shelter,Navajo,Arizona,USA,-1982,3610,170,3931,1582,2194,2.43,268.27,0.0089,0.98,0.0074,0.82
+Beta-360453,Eagles Watch,Kane,Utah,USA,-1206,2980,30,3155,2104,1489,2.34,258.40,0.0030,0.33,0.0006,0.07
+Beta-95272,Six Toe Shelter,San Juan,Utah,USA,-475,2360,80,2424,2172,1465,2.89,320.03,0.0040,0.44,0.0004,0.04
+Beta-36438,Cottonwood Cave,Montrose,Colorado,USA,-264,2220,80,2213,828,2768,1.79,197.56,0.0085,0.94,0.0045,0.50
+Beta-13414,42SV2111,Sevier,Utah,USA,-172,2140,100,2121,1696,1675,4.08,450.98,0.0443,4.90,0.0043,0.48
+Beta-283900,Eagle Rock Shelter,Delta,Colorado,USA,88,1940,40,1862,1873,1546,4.29,474.79,0.0165,1.83,0.0004,0.04
+Beta-36605,Juniper Ledge Shelter,Uintah,Utah,USA,417,1650,80,1533,1491,1785,2.14,236.96,0.0065,0.72,0.0054,0.60
+Beta-340988,Hot Spring Lake Site,Salt Lake,Utah,USA,729,1270,30,1221,1863,1286,2.88,318.68,0.0092,1.02,0.0009,0.10
+Beta-143631,Sonders Basket,Daggett,Utah,USA,820,1210,70,1130,1362,1960,2.44,270.32,0.0269,2.97,0.0009,0.10
+Beta-226298,Finch Draw Shelter,Daggett,Utah,USA,937,1110,40,1013,1314,1895,0.14,15.22,0.0012,0.13,0.0005,0.06
+Beta-379247,Willard Mounds,Box Elder,Utah,USA,1006,1040,30,944,1676,1285,2.60,287.33,0.0377,4.16,0.0074,0.82
