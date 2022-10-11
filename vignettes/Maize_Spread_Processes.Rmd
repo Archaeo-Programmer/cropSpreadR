@@ -135,207 +135,6 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```{r  Figure_1, fig.cap="Figure 1. swus_date_distribution.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
 
-swus_date_distribution_full <- MDB_env %>%
-  dplyr::filter(Country == "USA") %>%
-  ggplot(aes(x = Date)) +
-  geom_histogram(binwidth = 100, color = "#000000", fill = "cornflowerblue") +
-  xlab("Year BC/AD") +
-  ylab("Count") +
-  scale_x_continuous(breaks = seq(-4000, 2000, 500),
-                     limits = c(-4000, 2000)) +
-  scale_y_continuous(breaks = seq(0, 100, 10)) +
-  theme_classic() +
-  annotate(geom = "text", x = -3650, y = 15,
-             label = "Las Capas",
-             hjust = 0, angle = 45,
-             size = 6.75) +
-  annotate("segment", x = -3700, xend = -3600, y = 1, yend = 13, colour = "black") +
-  annotate("segment", x = -3500, xend = -3600, y = 1, yend = 13, colour = "black") +
-    annotate(geom = "text", x = -2200, y = 15,
-             label = "Old Corn",
-             hjust = 0, angle = 45,
-             size = 6.75) +
-  annotate("segment", x = -2300, xend = -2200, y = 1, yend = 13, colour = "black") +
-    theme(
-    legend.position = "none",
-    panel.spacing = unit(1, "lines"),
-    strip.text.x = element_text(
-      size = 16,
-      family = "Helvetica",
-      face = "bold"
-    ),
-    axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 20,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/swus_date_distribution.png"),
-  plot = swus_date_distribution_full,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
-
-
-swus_date_distribution_279 <- MDB_env %>%
-  dplyr::filter(Country == "USA") %>%
-  dplyr::group_by(SiteIDName) %>%
-  dplyr::slice_min(Date, with_ties = FALSE) %>%
-  ggplot(aes(x = Date)) +
-  geom_histogram(binwidth = 100,
-                 color = "#000000",
-                 fill = "cornflowerblue") +
-  xlab("Year BC/AD") +
-  ylab("Count") +
-  scale_x_continuous(breaks = seq(-4000, 2000, 500),
-                     limits = c(-4000, 2000)) +
-  scale_y_continuous(breaks = seq(0, 100, 10)) +
-  theme_classic() +
-  # Annotation for Las Capas.
-  annotate(
-    geom = "text",
-    x = -3650,
-    y = 15,
-    label = "Las Capas",
-    hjust = 0,
-    angle = 45,
-    size = 6.75
-  ) +
-  annotate(
-    "segment",
-    x = -3700,
-    xend = -3600,
-    y = 1,
-    yend = 13,
-    colour = "black"
-  ) +
-  # Annotation for Old Corn.
-  annotate(
-    geom = "text",
-    x = -2200,
-    y = 15,
-    label = "Old Corn",
-    hjust = 0,
-    angle = 45,
-    size = 6.75
-  ) +
-  annotate(
-    "segment",
-    x = -2300,
-    xend = -2200,
-    y = 1,
-    yend = 13,
-    colour = "black"
-  ) +
-  # Annotation for Los Pozos.
-  annotate(
-    geom = "text",
-    x = -2500,
-    y = 15,
-    label = "Los Pozos",
-    hjust = 0,
-    angle = 45,
-    size = 6.75
-  ) +
-  annotate(
-    "segment",
-    x = -2600,
-    xend = -2500,
-    y = 1,
-    yend = 13,
-    colour = "black"
-  ) +
-  theme(
-    legend.position = "none",
-    panel.spacing = unit(1, "lines"),
-    strip.text.x = element_text(
-      size = 16,
-      family = "Helvetica",
-      face = "bold"
-    ),
-    axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 20,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/swus_date_distribution_279.png"),
-  plot = swus_date_distribution_279,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
-
-
 maize_earliest_distribution <-  MDB_env %>%
   dplyr::filter(Lat > 30 & Date < 1500) %>%
   dplyr::group_by(SiteIDName) %>%
@@ -350,7 +149,7 @@ full_distribution <- MDB_env %>%
 swus_date_distribution_stacked <- maize_earliest_distribution %>%
   dplyr::bind_rows(., full_distribution) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(sample = factor(sample, levels = c("Full Database", "Earliest Maize Subset"))) %>%
+  dplyr::mutate(sample = factor(sample, levels = c("Full Maize Database", "Earliest Maize Subset"))) %>%
   ggplot(aes(x = Date, fill = sample)) +
   geom_histogram(
     binwidth = 100,
@@ -410,7 +209,7 @@ swus_date_distribution_stacked <- maize_earliest_distribution %>%
   ) +
   theme(
     legend.title = element_blank(),
-    legend.text = element_text(size = 12,
+    legend.text = element_text(size = 14,
                                family = "Helvetica"),
     panel.spacing = unit(1, "lines"),
     strip.text.x = element_text(
@@ -458,20 +257,12 @@ swus_date_distribution_stacked <- maize_earliest_distribution %>%
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/swus_date_distribution_stacked.png"),
+  filename = here::here("vignettes/figures/Figure_1.png"),
   plot = swus_date_distribution_stacked,
   width = 15.51,
   height = 10.32,
   dpi = 600
 )
-
-
-
-swus_date_distribution_stacked %>% 
-  dplyr::ungroup() %>% 
-  dplyr::mutate(bin = cut(Date, breaks = seq(-4000, 1500, 100))) %>% 
-  dplyr::group_by(bin, sample) %>% 
-  dplyr::summarise(dplyr::n())
 
 ```
 
@@ -599,139 +390,6 @@ p4 <- qplot(.hat, .stdresid, data = mod) + geom_smooth(se = FALSE)
 
 
 grid.arrange(p1,p2,p3,p4)
-
-```
-
-```{r Figure_1, fig.cap="Figure 1. TPS of earliest maize at each site.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
-
-library(sp)
-library(rgdal)
-library(geosphere)
-library(raster)
-library(fields)
-
-# TPS_inter <- MDB %>%
-#   dplyr::group_by(SiteIDName) %>%
-#   dplyr::slice_max(MedianBP) %>%
-#   dplyr::filter(Lat >= 30 & Date < 1500)
-
-TPS_inter <- maize_frontier_swus %>%
-  dplyr::bind_rows(MDB %>% dplyr::filter(LabID == "NSRL-12484"))
-
-x = TPS_inter$Long
-y = TPS_inter$Lat
-z = TPS_inter$Date
-
-# convert data to a SpatialPointsDataFrame object
-xysp <- SpatialPointsDataFrame(
-  matrix(c(x, y), ncol = 2),
-  data.frame(ID = seq(1:length(x))),
-  proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
-)
-
-# use the distm function to generate a geodesic distance matrix in meters
-mdist <- distm(xysp)
-
-# cluster all points using a hierarchical clustering approach
-hc <- hclust(as.dist(mdist), method = "complete")
-
-# define the distance threshold, in this case 40 m
-d = 6437.38
-
-# define clusters based on a tree "height" cutoff "d" and add them to the SpDataFrame
-xyp2 <- xysp
-xyp2$clust <- cutree(hc, h = d)
-
-df_clus <- as.data.frame(xyp2, z, TPS_inter$SiteIDName) %>%
-  dplyr::group_by(clust) %>%
-  dplyr::slice_min(z, with_ties = FALSE) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(-c(ID, clust)) %>%
-  dplyr::filter(!TPS_inter.SiteIDName %in% c("AA:12:745", "AA:12:232"))
-
-xy <- data.frame(x = df_clus$coords.x1, y = df_clus$coords.x2)
-z2 = df_clus$z
-rast <- raster::raster(ext = extent(xy),
-                       crs = 4326,
-                       resolution = 0.01)
-
-m <- fields::Tps(xy, z2)
-surface <- raster::interpolate(rast, m)
-
-png(
-  here::here("vignettes/figures/Figure_1_test.png"),
-  units = "in",
-  width = 15.43,
-  height = 13.15,
-  res = 600
-)
-
-plot(
-  surface,
-  xlim = c(-113.7015, -104.7915),
-  ylim = c(30.30626, 41.47626),
-  col = rev(wesanderson::wes_palette("Zissou1", 21, type = "continuous")),
-  asp = NA,
-  xaxt = 'n',
-  yaxt = 'n',
-  legend.args = list(
-    text = "      Years \n       BC/AD \n",
-    side = 3,
-    font = 2,
-    cex = 1.5
-  ),
-  legend.width = 1.25,
-  legend.shrink = 0.75
-)
-# contour(
-#   surface,
-#   asp = NA,
-#   add = TRUE,
-#   labcex = 1.1,
-#   xaxt = 'n',
-#   yaxt = 'n',
-#   vfont = c("sans serif", "bold")
-# )
-maps::map(
-  'state',
-  add = TRUE,
-  lwd = 1.5,
-  lty = 1,
-  col = "grey28"
-)
-
-dev.off()
-
-
-# Supplemental figure that just has the contour lines.
-# Need to re-run code above so that it uses MedianBP instead of Date. 
-# Also, for df_clus, you will need to use slice_max for MedianBP instead of slice_min (which is used for Date).
-png(
-  here::here("vignettes/figures/supplemental/Supp_Figure_contour.png"),
-  units = "in",
-  width = 15.43,
-  height = 13.15,
-  res = 600
-)
-
-contour(
-  surface,
-  asp = NA,
-  add = FALSE,
-  labcex = 1.1,
-  xaxt = 'n',
-  yaxt = 'n',
-  vfont = c("sans serif", "bold")
-)
-maps::map(
-  'state',
-  add = TRUE,
-  lwd = 1.5,
-  lty = 1,
-  col = "grey28"
-)
-
-dev.off()
 
 ```
 
@@ -2274,3 +1932,135 @@ out %>%
 
 ```
 
+```{r Figure_1_old, fig.cap="Figure 1. TPS of earliest maize at each site.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+library(sp)
+library(rgdal)
+library(geosphere)
+library(raster)
+library(fields)
+
+# TPS_inter <- MDB %>%
+#   dplyr::group_by(SiteIDName) %>%
+#   dplyr::slice_max(MedianBP) %>%
+#   dplyr::filter(Lat >= 30 & Date < 1500)
+
+TPS_inter <- maize_frontier_swus %>%
+  dplyr::bind_rows(MDB %>% dplyr::filter(LabID == "NSRL-12484"))
+
+x = TPS_inter$Long
+y = TPS_inter$Lat
+z = TPS_inter$Date
+
+# convert data to a SpatialPointsDataFrame object
+xysp <- SpatialPointsDataFrame(
+  matrix(c(x, y), ncol = 2),
+  data.frame(ID = seq(1:length(x))),
+  proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+)
+
+# use the distm function to generate a geodesic distance matrix in meters
+mdist <- distm(xysp)
+
+# cluster all points using a hierarchical clustering approach
+hc <- hclust(as.dist(mdist), method = "complete")
+
+# define the distance threshold, in this case 40 m
+d = 6437.38
+
+# define clusters based on a tree "height" cutoff "d" and add them to the SpDataFrame
+xyp2 <- xysp
+xyp2$clust <- cutree(hc, h = d)
+
+df_clus <- as.data.frame(xyp2, z, TPS_inter$SiteIDName) %>%
+  dplyr::group_by(clust) %>%
+  dplyr::slice_min(z, with_ties = FALSE) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-c(ID, clust)) %>%
+  dplyr::filter(!TPS_inter.SiteIDName %in% c("AA:12:745", "AA:12:232"))
+
+xy <- data.frame(x = df_clus$coords.x1, y = df_clus$coords.x2)
+z2 = df_clus$z
+rast <- raster::raster(ext = extent(xy),
+                       crs = 4326,
+                       resolution = 0.01)
+
+m <- fields::Tps(xy, z2)
+surface <- raster::interpolate(rast, m)
+
+png(
+  here::here("vignettes/figures/Figure_1_test.png"),
+  units = "in",
+  width = 15.43,
+  height = 13.15,
+  res = 600
+)
+
+plot(
+  surface,
+  xlim = c(-113.7015, -104.7915),
+  ylim = c(30.30626, 41.47626),
+  col = rev(wesanderson::wes_palette("Zissou1", 21, type = "continuous")),
+  asp = NA,
+  xaxt = 'n',
+  yaxt = 'n',
+  legend.args = list(
+    text = "      Years \n       BC/AD \n",
+    side = 3,
+    font = 2,
+    cex = 1.5
+  ),
+  legend.width = 1.25,
+  legend.shrink = 0.75
+)
+# contour(
+#   surface,
+#   asp = NA,
+#   add = TRUE,
+#   labcex = 1.1,
+#   xaxt = 'n',
+#   yaxt = 'n',
+#   vfont = c("sans serif", "bold")
+# )
+maps::map(
+  'state',
+  add = TRUE,
+  lwd = 1.5,
+  lty = 1,
+  col = "grey28"
+)
+
+dev.off()
+
+
+# Supplemental figure that just has the contour lines.
+# Need to re-run code above so that it uses MedianBP instead of Date. 
+# Also, for df_clus, you will need to use slice_max for MedianBP instead of slice_min (which is used for Date).
+png(
+  here::here("vignettes/figures/supplemental/Supp_Figure_contour.png"),
+  units = "in",
+  width = 15.43,
+  height = 13.15,
+  res = 600
+)
+
+contour(
+  surface,
+  asp = NA,
+  add = FALSE,
+  labcex = 1.1,
+  xaxt = 'n',
+  yaxt = 'n',
+  vfont = c("sans serif", "bold")
+)
+maps::map(
+  'state',
+  add = TRUE,
+  lwd = 1.5,
+  lty = 1,
+  col = "grey28"
+)
+
+dev.off()
+
+```
