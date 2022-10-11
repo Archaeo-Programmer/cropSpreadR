@@ -133,6 +133,92 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```
 
+```{r swus_date_distribution}
+
+swus_date_distribution <- MDB_env %>%
+  dplyr::filter(Country == "USA") %>%
+  ggplot(aes(x = Date)) +
+  geom_histogram(binwidth = 100, color = "#000000", fill = "cornflowerblue") +
+  xlab("Year BC/AD") +
+  ylab("Count") +
+  scale_x_continuous(breaks = seq(-4000, 2000, 500),
+                     limits = c(-4000, 2000)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  theme_classic() +
+  annotate(geom = "text", x = -3650, y = 15,
+             label = "Las Capas",
+             hjust = 0, angle = 45,
+             size = 6.75) +
+  annotate("segment", x = -3700, xend = -3600, y = 1, yend = 13, colour = "black") +
+  annotate("segment", x = -3500, xend = -3600, y = 1, yend = 13, colour = "black") +
+    annotate(geom = "text", x = -2200, y = 15,
+             label = "Old Corn",
+             hjust = 0, angle = 45,
+             size = 6.75) +
+  annotate("segment", x = -2300, xend = -2200, y = 1, yend = 13, colour = "black") +
+    theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/swus_date_distribution.png"),
+  plot = swus_date_distribution,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+MDB %>% 
+  dplyr::filter(Country == "USA") %>% 
+  dplyr::mutate(bin = cut(Date, breaks = seq(-3700, 2000, 100))) %>% 
+  dplyr::group_by(bin) %>% 
+  dplyr::summarise(dplyr::n())
+
+```
+
 ```{r multi_regression}
 
 mlr <- MDB_env %>%
@@ -257,7 +343,6 @@ p4 <- qplot(.hat, .stdresid, data = mod) + geom_smooth(se = FALSE)
 
 
 grid.arrange(p1,p2,p3,p4)
-
 
 ```
 
@@ -557,10 +642,15 @@ ggplot2::ggsave(
 ```{r Figure_3, fig.cap="Figure 3. Box plots showing elevation, GDD, and latitude for each sample in our maize database, which includes 1,043 samples) through time (Gillreath-Brown and Kohler n.d. 2022). The samples have been binned into 500 year time slices and plotted on the midpoint of the 500 year time bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 MDB_env2 <- MDB_env %>%
-  dplyr::filter(Date < 1500) %>%
+  dplyr::filter(Lat >= 30) %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_min(Date, with_ties = FALSE) %>% 
   dplyr::group_by(gr = cut(Date,
-                           breaks = seq(-4500, 1500,500),
-                           labels = seq(-4250, 1250,500))) %>% 
+                           breaks = seq(-4000, 2000, 500),
+                           labels = seq(-3750, 1750, 500))) %>% 
+    # dplyr::group_by(gr = cut(Date,
+    #                        breaks = seq(-4500, 1500,500),
+    #                        labels = seq(-4250, 1250,500))) %>% 
   dplyr::mutate(date2 = as.numeric(as.character(gr))) %>% 
   dplyr::ungroup() %>% 
   dplyr::select(-gr) %>% 
@@ -568,7 +658,7 @@ MDB_env2 <- MDB_env %>%
   dplyr::rename(Latitude = Lat, Elevation = elevation)
 
 env_summaries <- MDB_env2 %>% 
-  dplyr::summarise(across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
+  dplyr::summarise(dplyr::across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
 
 env_summaries_bp <-
   MDB_env2 %>%
