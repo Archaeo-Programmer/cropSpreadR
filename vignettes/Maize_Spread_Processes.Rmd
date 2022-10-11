@@ -133,9 +133,9 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```
 
-```{r swus_date_distribution}
+```{r  Figure_1, fig.cap="Figure 1. swus_date_distribution.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
 
-swus_date_distribution <- MDB_env %>%
+swus_date_distribution_full <- MDB_env %>%
   dplyr::filter(Country == "USA") %>%
   ggplot(aes(x = Date)) +
   geom_histogram(binwidth = 100, color = "#000000", fill = "cornflowerblue") +
@@ -205,16 +205,272 @@ swus_date_distribution <- MDB_env %>%
 
 ggplot2::ggsave(
   filename = here::here("vignettes/figures/swus_date_distribution.png"),
-  plot = swus_date_distribution,
+  plot = swus_date_distribution_full,
   width = 15.51,
   height = 10.32,
   dpi = 600
 )
 
-MDB %>% 
-  dplyr::filter(Country == "USA") %>% 
-  dplyr::mutate(bin = cut(Date, breaks = seq(-3700, 2000, 100))) %>% 
-  dplyr::group_by(bin) %>% 
+
+swus_date_distribution_279 <- MDB_env %>%
+  dplyr::filter(Country == "USA") %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_min(Date, with_ties = FALSE) %>%
+  ggplot(aes(x = Date)) +
+  geom_histogram(binwidth = 100,
+                 color = "#000000",
+                 fill = "cornflowerblue") +
+  xlab("Year BC/AD") +
+  ylab("Count") +
+  scale_x_continuous(breaks = seq(-4000, 2000, 500),
+                     limits = c(-4000, 2000)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  theme_classic() +
+  # Annotation for Las Capas.
+  annotate(
+    geom = "text",
+    x = -3650,
+    y = 15,
+    label = "Las Capas",
+    hjust = 0,
+    angle = 45,
+    size = 6.75
+  ) +
+  annotate(
+    "segment",
+    x = -3700,
+    xend = -3600,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  # Annotation for Old Corn.
+  annotate(
+    geom = "text",
+    x = -2200,
+    y = 15,
+    label = "Old Corn",
+    hjust = 0,
+    angle = 45,
+    size = 6.75
+  ) +
+  annotate(
+    "segment",
+    x = -2300,
+    xend = -2200,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  # Annotation for Los Pozos.
+  annotate(
+    geom = "text",
+    x = -2500,
+    y = 15,
+    label = "Los Pozos",
+    hjust = 0,
+    angle = 45,
+    size = 6.75
+  ) +
+  annotate(
+    "segment",
+    x = -2600,
+    xend = -2500,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/swus_date_distribution_279.png"),
+  plot = swus_date_distribution_279,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+
+maize_earliest_distribution <-  MDB_env %>%
+  dplyr::filter(Lat > 30 & Date < 1500) %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_min(Date, with_ties = FALSE) %>%
+  dplyr::mutate(sample = "Earliest Maize Subset")
+
+full_distribution <- MDB_env %>%
+  dplyr::filter(Lat > 30 & Date < 1500) %>%
+  dplyr::mutate(sample = "Full Maize Database") %>%
+  dplyr::filter(!LabID %in% maize_earliest_distribution$LabID)
+
+swus_date_distribution_stacked <- maize_earliest_distribution %>%
+  dplyr::bind_rows(., full_distribution) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(sample = factor(sample, levels = c("Full Database", "Earliest Maize Subset"))) %>%
+  ggplot(aes(x = Date, fill = sample)) +
+  geom_histogram(
+    binwidth = 100,
+    color = "#000000",
+    position = "stack",
+    center = -3650
+  ) +
+  scale_fill_manual(values = c("cornflowerblue", "#DDCC77")) +
+  xlab("Year BC/AD") +
+  ylab("Count") +
+  scale_x_continuous(breaks = seq(-4000, 1500, 500),
+                     limits = c(-4000, 1500)) +
+  scale_y_continuous(breaks = seq(0, 90, 10), limits = c(0, 90)) +
+  theme_classic() +
+  annotate(
+    geom = "text",
+    x = -3550,
+    y = 15,
+    label = "Las Capas",
+    hjust = 0,
+    angle = 45,
+    size = 6.75
+  ) +
+  annotate(
+    "segment",
+    x = -3650,
+    xend = -3550,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  annotate(
+    "segment",
+    x = -3450,
+    xend = -3550,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  # Annotation for Old Corn.
+  annotate(
+    geom = "text",
+    x = -2150,
+    y = 15,
+    label = "Old Corn",
+    hjust = 0,
+    angle = 45,
+    size = 6.75
+  ) +
+  annotate(
+    "segment",
+    x = -2250,
+    xend = -2150,
+    y = 1,
+    yend = 13,
+    colour = "black"
+  ) +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12,
+                               family = "Helvetica"),
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/swus_date_distribution_stacked.png"),
+  plot = swus_date_distribution_stacked,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+
+
+swus_date_distribution_stacked %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(bin = cut(Date, breaks = seq(-4000, 1500, 100))) %>% 
+  dplyr::group_by(bin, sample) %>% 
   dplyr::summarise(dplyr::n())
 
 ```
@@ -1061,7 +1317,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-106),
                        ylim = c(31.333254, 42))
 
-legend.breaks = 5
+legend.breaks = 3
 
 maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
@@ -1222,7 +1478,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-105),
                        ylim = c(31.333254, 42))
 
-legend.breaks = 5
+legend.breaks = 3
 
 maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
   country_shapes1 +
@@ -1380,7 +1636,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
-legend.breaks = 5
+legend.breaks = 3
 
 maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
@@ -1568,7 +1824,7 @@ mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
-legend.breaks = 5
+legend.breaks = 3
 
 maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   country_shapes1 +
@@ -1668,21 +1924,21 @@ ggplot2::ggsave(
 # maize_frontier_SW_delta_Lat
 # maize_frontier_mexico_delta_Lat
 
-ggpubr::ggexport(
-  ggpubr::ggarrange(
-    maize_frontier_SW_delta_Lat,
-    maize_frontier_mexico_delta_Lat,
-    maize_frontier_SW_delta_euclidean,
-    maize_frontier_mexico_euclidean_dist,
-    labels = c("A", "B", "C", "D"),
-    ncol = 2,
-    nrow = 2,
-    align = "v"
-  ),
-  filename = here::here("vignettes/figures/spread_rate_ALL.png"),
-  width = 18.51,
-  height = 20.32
-)
+# ggpubr::ggexport(
+#   ggpubr::ggarrange(
+#     maize_frontier_SW_delta_Lat,
+#     maize_frontier_mexico_delta_Lat,
+#     maize_frontier_SW_delta_euclidean,
+#     maize_frontier_mexico_euclidean_dist,
+#     labels = c("A", "B", "C", "D"),
+#     ncol = 2,
+#     nrow = 2,
+#     align = "v"
+#   ),
+#   filename = here::here("vignettes/figures/spread_rate_ALL.png"),
+#   width = 18.51,
+#   height = 20.32
+# )
 
 
 
