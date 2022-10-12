@@ -266,7 +266,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r maize_frontier_SW_delta_Lat, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_3, fig.cap="Figure 3. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
   maize_frontier_swus %>%
@@ -320,7 +320,7 @@ country_shapes1 <-
     size = 0.15
   )
 mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-106),
+  ggplot2::coord_fixed(xlim = c(-114.814521,-105),
                        ylim = c(31.333254, 42))
 
 legend.breaks = 3
@@ -342,7 +342,7 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
     alpha = 1.0,
     size = 1.0
   ) +
-  scale_color_distiller(palette = "RdYlGn") +
+  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
   # scale_color_distiller(
   #   name = "\u0394 km N/year",
   #   breaks = seq(
@@ -383,7 +383,7 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
   ggrepel::geom_label_repel(
     aes(x = lon, y = lat, label = name),
     # draw text labels
-    size = 5.5,
+    size = 2.75,
     color = "black",
     min.segment.length = 0.25,
     fill = alpha(c("white"), 0.7),
@@ -394,30 +394,31 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
   ) +
   #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
-  ggthemes::theme_map() +
-  theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    legend.position = c(0.777, 0.752),
-    legend.key.size = unit(0.95, "cm"),
-    legend.text = element_text(size = 19, family = "Helvetica"),
+  # ggsn::north(x.min = -114, x.max = -114.08, 
+  #             y.min = 31, y.max = 31.3, scale = 1.5) +
+  theme_void() +
+  theme(
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.7, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
       size = 21,
       face = "bold",
       family = "Helvetica"
     )
   )
+#maize_frontier_SW_delta_Lat
   #ggtitle("Change in Latitude North per Year")
 
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/spread_rate.png"),
-  plot = maize_frontier_SW_delta_Lat,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
-
-```
-
-```{r maize_frontier_SW_delta_euclidean, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/spread_rate.png"),
+#   plot = maize_frontier_SW_delta_Lat,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
 
 nodes1 <-
   maize_frontier_swus %>%
@@ -461,7 +462,7 @@ edges1 <- data.frame(
   from = 1:12,
   to = 2:13,
   weight = nodes1$normal[!is.na(nodes1$normal)],
-  color = nodes1$delta_lat_km[!is.na(nodes1$delta_lat_km)]
+  color = nodes1$delta_km[!is.na(nodes1$delta_km)]
 )
 
 g1 <-
@@ -496,42 +497,44 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
       y = y,
       xend = xend,
       yend = yend,
-      size = color,
+      #size = color,
       color = color
     ),
-    arrow = arrow(length = unit(0.03, "npc"), type = "closed"),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
     data = edges_for_plot1,
     curvature = 0.3,
-    alpha = 1.0
+    alpha = 1.0,
+    size = 1.0
   ) +
-  scale_color_distiller(
-    name = "\u0394 km ED/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    )),
-       palette = "RdYlGn",
-   direction="horizontal"
-  ) +
-  scale_size_continuous(
-    name = "\u0394 km ED/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ))
-  ) +    # scale for node size
+  scale_color_distiller(palette = "RdYlGn", direction=1, name = "\u0394 km ED/year") +
+  # scale_color_distiller(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   )),
+  #      palette = "RdYlGn",
+  #  direction="horizontal"
+  # ) +
+  # scale_size_continuous(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ))
+  # ) +    # scale for node size
   geom_point(
     aes(x = lon, y = lat),
     # draw nodes
@@ -544,7 +547,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
   ggrepel::geom_label_repel(
     aes(x = lon, y = lat, label = name),
     # draw text labels
-    size = 5.5,
+    size = 2.75,
     color = "black",
     min.segment.length = 0.25,
     fill = alpha(c("white"), 0.7),
@@ -553,13 +556,15 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
     nudge_y = 0.15,
     family = "Helvetica"
   ) +
-  guides(color = guide_legend(), size = guide_legend()) +
+  #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
-  ggthemes::theme_map() +
-  theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    legend.position = c(0.777, 0.752),
-    legend.key.size = unit(0.95, "cm"),
-    legend.text = element_text(size = 19, family = "Helvetica"),
+  theme_void() +
+  theme(
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.7, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
       size = 21,
       face = "bold",
@@ -568,17 +573,26 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
   )
   #labs(title = "Change in Euclidean Distance (km) per Year")
 
-ggplot2::ggsave( 
-  filename = here::here("vignettes/figures/spread_rate_euclidean.png"),
-  plot = maize_frontier_SW_delta_euclidean,
-  width = 15.51,
-  height = 10.32,
+# ggplot2::ggsave( 
+#   filename = here::here("vignettes/figures/spread_rate_euclidean.png"),
+#   plot = maize_frontier_SW_delta_euclidean,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
+
+Figure_3 <- cowplot::plot_grid(maize_frontier_SW_delta_Lat, maize_frontier_SW_delta_euclidean, labels = "AUTO", label_x = 0.253, label_y = 0.99, align = "v", nrow = 2, ncol = 1)
+ggplot2::ggsave(
+  Figure_3,
+  filename = here::here("vignettes/figures/Figure_3.png"),
+  # width = 30.24,
+  # height = 18.26,
   dpi = 600
 )
 
 ```
 
-```{r maize_frontier_mexico_delta_Lat, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_2, fig.cap="Figure 2. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
   maize_frontier_mexico %>%
@@ -655,42 +669,44 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
       y = y,
       xend = xend,
       yend = yend,
-      size = color,
+      #size = color,
       color = color
     ),
-    arrow = arrow(length = unit(0.03, "npc"), type = "closed"),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
     data = edges_for_plot1,
     curvature = 0.3,
-    alpha = 1.0
+    alpha = 1.0,
+    size = 1.0
   ) +
-  scale_color_distiller(
-    name = "\u0394 km N/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    )),
-       palette = "RdYlGn",
-    direction="horizontal"
-  ) +
-  scale_size_continuous(
-    name = "\u0394 km N/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ))
-  ) +    # scale for node size
+  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
+  # scale_color_distiller(
+  #   name = "\u0394 km N/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   )),
+  #      palette = "RdYlGn",
+  #   direction="horizontal"
+  # ) +
+  # scale_size_continuous(
+  #   name = "\u0394 km N/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ))
+  # ) +    # scale for node size
   geom_point(
     aes(x = lon, y = lat),
     # draw nodes
@@ -703,23 +719,25 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   ggrepel::geom_label_repel(
     aes(x = lon, y = lat, label = name),
     # draw text labels
-    size = 5,
+    size = 2.25,
     color = "black",
     min.segment.length = 0.25,
     fill = alpha(c("white"), 0.7),
     force = 27,
     nudge_x = -0.51,
     nudge_y = 0.15,
-    family = "Helvetica"
+    family = "Helvetica",
+    max.overlaps = 15
   ) +
-  guides(color = guide_legend(), size = guide_legend()) +
+  #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
-  ggthemes::theme_map() +
-  theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    plot.margin=grid::unit(c(0.25,0.25,0.25,0.25), "mm"),
-    legend.position = c(0.783, 0.758),
-    legend.key.size = unit(0.95, "cm"),
-    legend.text = element_text(size = 19, family = "Helvetica"),
+ theme_void() +
+  theme(
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.65, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
       size = 21,
       face = "bold",
@@ -728,17 +746,14 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   )
   #labs(title = "Change in Latitude North per Year")
 
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/spread_rate_mexico.png"),
-  plot = maize_frontier_mexico_delta_Lat,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/spread_rate_mexico.png"),
+#   plot = maize_frontier_mexico_delta_Lat,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
 
-```
-
-```{r maize_frontier_mexico_euclidean_dist, fig.cap="Figure. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes <-
   maize_frontier_mexico %>%
@@ -843,43 +858,45 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
       y = y,
       xend = xend,
       yend = yend,
-      size = color,
+      #size = color,
       color = color
     ),
-    arrow = arrow(length = unit(0.03, "npc"), type = "closed"),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
     data = edges_for_plot1,
     curvature = 0.3,
-    alpha = 1.0
+    alpha = 1.0,
+    size = 1.0
   ) +
-  scale_color_distiller(
-    name = "\u0394 km ED/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    )),
-   palette = "RdYlGn",
-   direction="horizontal"
-    
-  ) +
-  scale_size_continuous(
-    name = "\u0394 km ED/year",
-    breaks = seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ),
-    labels = sprintf("%.2f", seq(
-      min(edges_for_plot1$color),
-      max(edges_for_plot1$color),
-      length.out = legend.breaks
-    ))
-  ) +    # scale for node size
+  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
+  # scale_color_distiller(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   )),
+  #  palette = "RdYlGn",
+  #  direction="horizontal"
+  #   
+  # ) +
+  # scale_size_continuous(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ))
+  # ) +    # scale for node size
   geom_point(
     aes(x = lon, y = lat),
     # draw nodes
@@ -892,23 +909,25 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   ggrepel::geom_label_repel(
     aes(x = lon, y = lat, label = name),
     # draw text labels
-    size = 5,
+    size = 2.25,
     color = "black",
     min.segment.length = 0.25,
     fill = alpha(c("white"), 0.7),
     force = 27,
     nudge_x = -0.51,
     nudge_y = 0.15,
-    family = "Helvetica"
+    family = "Helvetica",
+    max.overlaps = 15
   ) +
-  guides(color = guide_legend(), size = guide_legend()) +
+  #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
-  ggthemes::theme_map() +
-  theme(plot.title = element_text(size=22, face = "bold", family = "Helvetica"),
-    plot.margin=grid::unit(c(0.25,0.25,0.25,0.25), "mm"),
-    legend.position = c(0.76, 0.757),
-    legend.key.size = unit(0.95, "cm"),
-    legend.text = element_text(size = 19, family = "Helvetica"),
+  theme_void() +
+  theme(
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.65, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
       size = 21,
       face = "bold",
@@ -917,11 +936,20 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   )
   #labs(title = "Change in Euclidean Distance (km) per Year")
 
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/spread_rate_mexico_euclidean.png"),
+#   plot = maize_frontier_mexico_euclidean_dist,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
+
+Figure_2 <- cowplot::plot_grid(maize_frontier_mexico_delta_Lat, maize_frontier_mexico_euclidean_dist, labels = "AUTO", label_x = 0.275, label_y = 0.99, align = "v", nrow = 2, ncol = 1)
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/spread_rate_mexico_euclidean.png"),
-  plot = maize_frontier_mexico_euclidean_dist,
-  width = 15.51,
-  height = 10.32,
+  Figure_2,
+  filename = here::here("vignettes/figures/Figure_2.png"),
+  # width = 30.24,
+  # height = 18.26,
   dpi = 600
 )
 

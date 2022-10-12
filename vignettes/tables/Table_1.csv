@@ -1,4 +1,4 @@
-"Lab ID","Site Name","County","State","Country","Date","Age","Error","Median BP","GDD","Elevation","Euclidean Distance (Degrees)","Euclidean Distance (km)","Δ Degrees Euclidean Distance/Year","Δ km Euclidean Distance/Year","Δ Degrees North/Year","Δ km North/Year"
+﻿"Lab ID","Site Name","County","State","Country","Date","Age","Error","Median BP","GDD","Elevation","Euclidean Distance (Degrees)","Euclidean Distance (km)","Δ Degrees Euclidean Distance/Year","Δ km Euclidean Distance/Year","Δ Degrees North/Year","Δ km North/Year"
 "Beta-132510","Guilá Naquitz",NA,"Oaxaca","Mexico",-4277,5410,40,6226,3471.0192378259476,1935,NA,NA,NA,NA,NA,NA
 "Beta-344171","Las Capas","Pima","Arizona","USA",-3694,4930,30,5643,3797.1774351366103,670.35992431640625,21.253091741438585,2350.03936621783,0.03645470281550357,4.030942309121492,0.0264,2.9191536
 "Beta-185023","Old Corn","Catron","New Mexico","USA",-2256,3810,50,4205,1938.7960834195537,1909.348876953125,3.074166934810141,339.9229346496965,0.002137807326015397,0.2363859072668265,0.0015,0.165861
