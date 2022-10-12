@@ -266,6 +266,394 @@ ggplot2::ggsave(
 
 ```
 
+```{r Figure_2, fig.cap="Figure 2. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+nodes1 <-
+  maize_frontier_mexico %>%
+  dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
+                SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)) %>%
+  dplyr::arrange(Date) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  dplyr::select(id, Long, Lat, SiteName, Date) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+                delta = as.numeric(sprintf("%.2f", delta))) %>% 
+  # dplyr::mutate(delta = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
+  #               delta = as.numeric(sprintf("%.5f", delta))) %>%
+  dplyr::mutate(normal = (delta - min(delta, na.rm = T)) / (max(delta, na.rm = T) -
+                                                              min(delta, na.rm = T))) %>%
+  dplyr::arrange(normal)
+
+nodes1_rev <- nodes1 %>%
+  dplyr::arrange(desc(normal))
+
+nodes1$normal <- nodes1_rev$normal
+
+names(nodes1) <-
+  c("id", "lon", "lat", "name", "date", "delta", "normal")
+
+nodes1 <- nodes1 %>%
+  dplyr::arrange(id)
+
+edges1 <- data.frame(
+  from = 1:13,
+  to = 2:14,
+  weight = nodes1$normal[!is.na(nodes1$normal)],
+  color = nodes1$delta[!is.na(nodes1$delta)]
+)
+
+g1 <-
+  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
+
+edges_for_plot1 <- edges1 %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
+  dplyr::rename(x = lon, y = lat) %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
+  dplyr::rename(xend = lon, yend = lat)
+assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+country_shapes1 <-
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('world'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+country_shapes2 <- 
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('state'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+mapcoords1 <-
+  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
+                       ylim = c(14.72716, 42.001167))
+
+legend.breaks = 3
+
+maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
+  country_shapes1 +
+  country_shapes2 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      #size = color,
+      color = color
+    ),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 1.0,
+    size = 1.0
+  ) +
+  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
+  # scale_color_distiller(
+  #   name = "\u0394 km N/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   )),
+  #      palette = "RdYlGn",
+  #   direction="horizontal"
+  # ) +
+  # scale_size_continuous(
+  #   name = "\u0394 km N/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ))
+  # ) +    # scale for node size
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  ggrepel::geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 2.25,
+    color = "black",
+    min.segment.length = 0.15,
+    fill = alpha(c("white"), 0.7),
+    force = 34,
+    # nudge_x = -0.51,
+    # nudge_y = 0.15,
+    family = "Helvetica",
+    max.overlaps = 15
+  ) +
+  #guides(color = guide_legend(), size = guide_legend()) +
+  mapcoords1 +
+ theme_void() +
+  theme(
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    legend.box.spacing = unit(15.0, "pt"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.65, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
+    legend.title = element_text(
+      size = 21,
+      face = "bold",
+      family = "Helvetica"
+    )
+  )
+  #labs(title = "Change in Latitude North per Year")
+
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/spread_rate_mexico.png"),
+#   plot = maize_frontier_mexico_delta_Lat,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
+
+
+nodes <-
+  maize_frontier_mexico %>%
+  dplyr::mutate(
+    SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
+    SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)
+  ) %>%
+  dplyr::arrange(Date) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  #dplyr::select(id, Long, Lat, SiteName, Date) %>%
+  dplyr::mutate(
+    lead_row = geometry[dplyr::row_number() + 1],
+    dist_deg = as.numeric(dplyr::lag(
+      sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
+    )),
+    dist_km = dist_deg * 110.574,
+    delta_deg = dist_deg / (Date - dplyr::lag(Date)),
+    delta_km = dist_km / (Date - dplyr::lag(Date)),
+    delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)),
+    delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)),
+    delta_lat_km = delta_lat_deg * 110.574
+  ) %>%
+  dplyr::select(-lead_row) %>%
+  sf::st_drop_geometry() %>% 
+    dplyr::mutate(normal = (delta_km - min(delta_km, na.rm = T)) / (max(delta_km, na.rm = T) -
+                                                              min(delta_km, na.rm = T))) %>%
+  dplyr::arrange(normal)
+
+maize_spread_table <- nodes %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::select(LabID, SiteName, NAME, REGION, Country, Date, Age, Error, MedianBP, GDD, elevation, dist_deg:delta_lat_km) %>% 
+  dplyr::mutate(across(c(NAME, REGION), tools::toTitleCase),
+                REGION = ifelse(SiteName == "Guilá Naquitz", "Oaxaca", REGION))
+
+names(maize_spread_table) <- c("Lab ID", "Site Name", "County", "State", "Country", "Date", 
+"Age", "Error", "Median BP", "GDD", "Elevation", "Euclidean Distance (Degrees)", "Euclidean Distance (km)", 
+"\u0394 Degrees Euclidean Distance/Year", "\u0394 km Euclidean Distance/Year", "\u0394 Degrees North/Year", "\u0394 km North/Year")
+  
+readr::write_excel_csv(maize_spread_table, here::here("vignettes/tables/Table_1.csv"))
+
+
+nodes1 <- nodes %>% 
+  dplyr::select(c("id", "Long", "Lat", "SiteName", "Date", "dist_deg", "dist_km", 
+"delta_deg", "delta_km", "delta_lat_deg", "delta_lat_km", "normal"))
+
+nodes1_rev <- nodes1 %>%
+  dplyr::arrange(desc(normal))
+
+nodes1$normal <- nodes1_rev$normal
+
+names(nodes1) <-
+  c("id", "lon", "lat", "name", "date", "dist_deg", "dist_km", "delta_deg", "delta_km", "delta_lat_deg", "delta_lat_km", "normal")
+
+nodes1 <- nodes1 %>%
+  dplyr::arrange(id)
+
+edges1 <- data.frame(
+  from = 1:13,
+  to = 2:14,
+  weight = nodes1$normal[!is.na(nodes1$normal)],
+  color = nodes1$delta_km[!is.na(nodes1$delta_km)]
+)
+
+g1 <-
+  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
+
+edges_for_plot1 <- edges1 %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
+  dplyr::rename(x = lon, y = lat) %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
+  dplyr::rename(xend = lon, yend = lat)
+assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+country_shapes1 <-
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('world'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+country_shapes2 <- 
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('state'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+mapcoords1 <-
+  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
+                       ylim = c(14.72716, 42.001167))
+
+legend.breaks = 3
+
+maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
+  country_shapes1 +
+  country_shapes2 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      #size = color,
+      color = color
+    ),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 1.0,
+    size = 1.0
+  ) +
+  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km ED/year") +
+  # scale_color_distiller(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   )),
+  #  palette = "RdYlGn",
+  #  direction="horizontal"
+  #   
+  # ) +
+  # scale_size_continuous(
+  #   name = "\u0394 km ED/year",
+  #   breaks = seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ),
+  #   labels = sprintf("%.2f", seq(
+  #     min(edges_for_plot1$color),
+  #     max(edges_for_plot1$color),
+  #     length.out = legend.breaks
+  #   ))
+  # ) +    # scale for node size
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  ggrepel::geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 2.25,
+    color = "black",
+    min.segment.length = 0.15,
+    fill = alpha(c("white"), 0.7),
+    force = 34,
+    # nudge_x = -0.51,
+    # nudge_y = 0.15,
+    family = "Helvetica",
+    max.overlaps = 15
+  ) +
+  #guides(color = guide_legend(), size = guide_legend()) +
+  mapcoords1 +
+  theme_void() +
+  theme(
+    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
+    plot.margin = grid::unit(c(2,2,2,2), "mm"),
+    legend.box.spacing = unit(15.0, "pt"),
+    #legend.position = c(0.787, 0.764),
+    legend.key.size = unit(0.65, "cm"),
+    legend.text = element_text(size = 16, family = "Helvetica"),
+    legend.title = element_text(
+      size = 21,
+      face = "bold",
+      family = "Helvetica"
+    )
+  )
+  #labs(title = "Change in Euclidean Distance (km) per Year")
+# 
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/spread_rate_mexico_euclidean.png"),
+#   plot = maize_frontier_mexico_euclidean_dist,
+#   # width = 15.51,
+#   # height = 10.32,
+#   dpi = 600
+# )
+
+Figure_2 <- cowplot::plot_grid(maize_frontier_mexico_delta_Lat, maize_frontier_mexico_euclidean_dist, labels = "AUTO", label_x = 0.275, label_y = 0.99, align = "v", nrow = 2, ncol = 1)
+ggplot2::ggsave(
+  Figure_2,
+  filename = here::here("vignettes/figures/Figure_2.png"),
+  # width = 32,
+  # height = 24.75,
+  dpi = 900
+)
+
+
+# Make a gridded plot.
+# maize_frontier_SW_delta_euclidean
+# maize_frontier_mexico_euclidean_dist
+# maize_frontier_SW_delta_Lat
+# maize_frontier_mexico_delta_Lat
+
+# ggpubr::ggexport(
+#   ggpubr::ggarrange(
+#     maize_frontier_SW_delta_Lat,
+#     maize_frontier_mexico_delta_Lat,
+#     maize_frontier_SW_delta_euclidean,
+#     maize_frontier_mexico_euclidean_dist,
+#     labels = c("A", "B", "C", "D"),
+#     ncol = 2,
+#     nrow = 2,
+#     align = "v"
+#   ),
+#   filename = here::here("vignettes/figures/spread_rate_ALL.png"),
+#   width = 18.51,
+#   height = 20.32
+# )
+
+```
+
 ```{r Figure_3, fig.cap="Figure 3. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
@@ -385,11 +773,11 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
     # draw text labels
     size = 2.75,
     color = "black",
-    min.segment.length = 0.25,
+    min.segment.length = 0.15,
     fill = alpha(c("white"), 0.7),
-    force = 27,
-    nudge_x = -0.51,
-    nudge_y = 0.15,
+    force = 34,
+    # nudge_x = -0.51,
+    # nudge_y = 0.15,
     family = "Helvetica"
   ) +
   #guides(color = guide_legend(), size = guide_legend()) +
@@ -401,6 +789,7 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes1) +
     plot.margin = grid::unit(c(2,2,2,2), "mm"),
     plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
     #legend.position = c(0.787, 0.764),
+    legend.box.spacing = unit(15.0, "pt"),
     legend.key.size = unit(0.7, "cm"),
     legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
@@ -549,9 +938,9 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
     # draw text labels
     size = 2.75,
     color = "black",
-    min.segment.length = 0.25,
+    min.segment.length = 0.15,
     fill = alpha(c("white"), 0.7),
-    force = 27,
+    force = 34,
     nudge_x = -0.51,
     nudge_y = 0.15,
     family = "Helvetica"
@@ -563,6 +952,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes1) +
     plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
     plot.margin = grid::unit(c(2,2,2,2), "mm"),
     #legend.position = c(0.787, 0.764),
+    legend.box.spacing = unit(15.0, "pt"),
     legend.key.size = unit(0.7, "cm"),
     legend.text = element_text(size = 16, family = "Helvetica"),
     legend.title = element_text(
@@ -587,396 +977,8 @@ ggplot2::ggsave(
   filename = here::here("vignettes/figures/Figure_3.png"),
   # width = 30.24,
   # height = 18.26,
-  dpi = 600
+  dpi = 900
 )
-
-```
-
-```{r Figure_2, fig.cap="Figure 2. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
-
-nodes1 <-
-  maize_frontier_mexico %>%
-  dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
-                SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)) %>%
-  dplyr::arrange(Date) %>%
-  dplyr::mutate(id = dplyr::row_number()) %>%
-  dplyr::select(id, Long, Lat, SiteName, Date) %>%
-  sf::st_drop_geometry() %>%
-  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
-                delta = as.numeric(sprintf("%.2f", delta))) %>% 
-  # dplyr::mutate(delta = (Lat - dplyr::lag(Lat)) / (Date - dplyr::lag(Date)),
-  #               delta = as.numeric(sprintf("%.5f", delta))) %>%
-  dplyr::mutate(normal = (delta - min(delta, na.rm = T)) / (max(delta, na.rm = T) -
-                                                              min(delta, na.rm = T))) %>%
-  dplyr::arrange(normal)
-
-nodes1_rev <- nodes1 %>%
-  dplyr::arrange(desc(normal))
-
-nodes1$normal <- nodes1_rev$normal
-
-names(nodes1) <-
-  c("id", "lon", "lat", "name", "date", "delta", "normal")
-
-nodes1 <- nodes1 %>%
-  dplyr::arrange(id)
-
-edges1 <- data.frame(
-  from = 1:13,
-  to = 2:14,
-  weight = nodes1$normal[!is.na(nodes1$normal)],
-  color = nodes1$delta[!is.na(nodes1$delta)]
-)
-
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
-
-edges_for_plot1 <- edges1 %>%
-  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
-  dplyr::rename(x = lon, y = lat) %>%
-  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
-  dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
-
-country_shapes1 <-
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('world'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-country_shapes2 <- 
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('state'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
-                       ylim = c(14.72716, 42.001167))
-
-legend.breaks = 3
-
-maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
-  country_shapes1 +
-  country_shapes2 +
-  geom_curve(
-    aes(
-      x = x,
-      y = y,
-      xend = xend,
-      yend = yend,
-      #size = color,
-      color = color
-    ),
-    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
-    curvature = 0.3,
-    alpha = 1.0,
-    size = 1.0
-  ) +
-  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
-  # scale_color_distiller(
-  #   name = "\u0394 km N/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   )),
-  #      palette = "RdYlGn",
-  #   direction="horizontal"
-  # ) +
-  # scale_size_continuous(
-  #   name = "\u0394 km N/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ))
-  # ) +    # scale for node size
-  geom_point(
-    aes(x = lon, y = lat),
-    # draw nodes
-    shape = 21,
-    fill = 'white',
-    color = 'black',
-    stroke = 0.5,
-    size = 3.5
-  ) +
-  ggrepel::geom_label_repel(
-    aes(x = lon, y = lat, label = name),
-    # draw text labels
-    size = 2.25,
-    color = "black",
-    min.segment.length = 0.25,
-    fill = alpha(c("white"), 0.7),
-    force = 27,
-    nudge_x = -0.51,
-    nudge_y = 0.15,
-    family = "Helvetica",
-    max.overlaps = 15
-  ) +
-  #guides(color = guide_legend(), size = guide_legend()) +
-  mapcoords1 +
- theme_void() +
-  theme(
-    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
-    plot.margin = grid::unit(c(2,2,2,2), "mm"),
-    #legend.position = c(0.787, 0.764),
-    legend.key.size = unit(0.65, "cm"),
-    legend.text = element_text(size = 16, family = "Helvetica"),
-    legend.title = element_text(
-      size = 21,
-      face = "bold",
-      family = "Helvetica"
-    )
-  )
-  #labs(title = "Change in Latitude North per Year")
-
-# ggplot2::ggsave(
-#   filename = here::here("vignettes/figures/spread_rate_mexico.png"),
-#   plot = maize_frontier_mexico_delta_Lat,
-#   width = 15.51,
-#   height = 10.32,
-#   dpi = 600
-# )
-
-
-nodes <-
-  maize_frontier_mexico %>%
-  dplyr::mutate(
-    SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
-    SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)
-  ) %>%
-  dplyr::arrange(Date) %>%
-  dplyr::mutate(id = dplyr::row_number()) %>%
-  #dplyr::select(id, Long, Lat, SiteName, Date) %>%
-  dplyr::mutate(
-    lead_row = geometry[dplyr::row_number() + 1],
-    dist_deg = as.numeric(dplyr::lag(
-      sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
-    )),
-    dist_km = dist_deg * 110.574,
-    delta_deg = dist_deg / (Date - dplyr::lag(Date)),
-    delta_km = dist_km / (Date - dplyr::lag(Date)),
-    delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)),
-    delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)),
-    delta_lat_km = delta_lat_deg * 110.574
-  ) %>%
-  dplyr::select(-lead_row) %>%
-  sf::st_drop_geometry() %>% 
-    dplyr::mutate(normal = (delta_km - min(delta_km, na.rm = T)) / (max(delta_km, na.rm = T) -
-                                                              min(delta_km, na.rm = T))) %>%
-  dplyr::arrange(normal)
-
-maize_spread_table <- nodes %>% 
-  dplyr::arrange(Date) %>% 
-  dplyr::select(LabID, SiteName, NAME, REGION, Country, Date, Age, Error, MedianBP, GDD, elevation, dist_deg:delta_lat_km) %>% 
-  dplyr::mutate(across(c(NAME, REGION), tools::toTitleCase),
-                REGION = ifelse(SiteName == "Guilá Naquitz", "Oaxaca", REGION))
-
-names(maize_spread_table) <- c("Lab ID", "Site Name", "County", "State", "Country", "Date", 
-"Age", "Error", "Median BP", "GDD", "Elevation", "Euclidean Distance (Degrees)", "Euclidean Distance (km)", 
-"\u0394 Degrees Euclidean Distance/Year", "\u0394 km Euclidean Distance/Year", "\u0394 Degrees North/Year", "\u0394 km North/Year")
-  
-readr::write_excel_csv(maize_spread_table, here::here("vignettes/tables/Table_1.csv"))
-
-
-nodes1 <- nodes %>% 
-  dplyr::select(c("id", "Long", "Lat", "SiteName", "Date", "dist_deg", "dist_km", 
-"delta_deg", "delta_km", "delta_lat_deg", "delta_lat_km", "normal"))
-
-nodes1_rev <- nodes1 %>%
-  dplyr::arrange(desc(normal))
-
-nodes1$normal <- nodes1_rev$normal
-
-names(nodes1) <-
-  c("id", "lon", "lat", "name", "date", "dist_deg", "dist_km", "delta_deg", "delta_km", "delta_lat_deg", "delta_lat_km", "normal")
-
-nodes1 <- nodes1 %>%
-  dplyr::arrange(id)
-
-edges1 <- data.frame(
-  from = 1:13,
-  to = 2:14,
-  weight = nodes1$normal[!is.na(nodes1$normal)],
-  color = nodes1$delta_km[!is.na(nodes1$delta_km)]
-)
-
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
-
-edges_for_plot1 <- edges1 %>%
-  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
-  dplyr::rename(x = lon, y = lat) %>%
-  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
-  dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
-
-country_shapes1 <-
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('world'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-country_shapes2 <- 
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('state'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
-                       ylim = c(14.72716, 42.001167))
-
-legend.breaks = 3
-
-maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
-  country_shapes1 +
-  country_shapes2 +
-  geom_curve(
-    aes(
-      x = x,
-      y = y,
-      xend = xend,
-      yend = yend,
-      #size = color,
-      color = color
-    ),
-    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
-    curvature = 0.3,
-    alpha = 1.0,
-    size = 1.0
-  ) +
-  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
-  # scale_color_distiller(
-  #   name = "\u0394 km ED/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   )),
-  #  palette = "RdYlGn",
-  #  direction="horizontal"
-  #   
-  # ) +
-  # scale_size_continuous(
-  #   name = "\u0394 km ED/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ))
-  # ) +    # scale for node size
-  geom_point(
-    aes(x = lon, y = lat),
-    # draw nodes
-    shape = 21,
-    fill = 'white',
-    color = 'black',
-    stroke = 0.5,
-    size = 3.5
-  ) +
-  ggrepel::geom_label_repel(
-    aes(x = lon, y = lat, label = name),
-    # draw text labels
-    size = 2.25,
-    color = "black",
-    min.segment.length = 0.25,
-    fill = alpha(c("white"), 0.7),
-    force = 27,
-    nudge_x = -0.51,
-    nudge_y = 0.15,
-    family = "Helvetica",
-    max.overlaps = 15
-  ) +
-  #guides(color = guide_legend(), size = guide_legend()) +
-  mapcoords1 +
-  theme_void() +
-  theme(
-    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
-    plot.margin = grid::unit(c(2,2,2,2), "mm"),
-    #legend.position = c(0.787, 0.764),
-    legend.key.size = unit(0.65, "cm"),
-    legend.text = element_text(size = 16, family = "Helvetica"),
-    legend.title = element_text(
-      size = 21,
-      face = "bold",
-      family = "Helvetica"
-    )
-  )
-  #labs(title = "Change in Euclidean Distance (km) per Year")
-
-# ggplot2::ggsave(
-#   filename = here::here("vignettes/figures/spread_rate_mexico_euclidean.png"),
-#   plot = maize_frontier_mexico_euclidean_dist,
-#   width = 15.51,
-#   height = 10.32,
-#   dpi = 600
-# )
-
-Figure_2 <- cowplot::plot_grid(maize_frontier_mexico_delta_Lat, maize_frontier_mexico_euclidean_dist, labels = "AUTO", label_x = 0.275, label_y = 0.99, align = "v", nrow = 2, ncol = 1)
-ggplot2::ggsave(
-  Figure_2,
-  filename = here::here("vignettes/figures/Figure_2.png"),
-  # width = 30.24,
-  # height = 18.26,
-  dpi = 600
-)
-
-
-# Make a gridded plot.
-# maize_frontier_SW_delta_euclidean
-# maize_frontier_mexico_euclidean_dist
-# maize_frontier_SW_delta_Lat
-# maize_frontier_mexico_delta_Lat
-
-# ggpubr::ggexport(
-#   ggpubr::ggarrange(
-#     maize_frontier_SW_delta_Lat,
-#     maize_frontier_mexico_delta_Lat,
-#     maize_frontier_SW_delta_euclidean,
-#     maize_frontier_mexico_euclidean_dist,
-#     labels = c("A", "B", "C", "D"),
-#     ncol = 2,
-#     nrow = 2,
-#     align = "v"
-#   ),
-#   filename = here::here("vignettes/figures/spread_rate_ALL.png"),
-#   width = 18.51,
-#   height = 20.32
-# )
-
-
 
 ```
 
@@ -1510,6 +1512,12 @@ mlr2 <- mlr %>%
 
 fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
 summary(fit)
+
+fit <- lm(Date ~ GDD * Lat, data = mlr)
+summary(fit)
+
+summary(lm(Date ~ (Lat + GDD + elevation)^2, data = mlr))
+summary(lm(Date ~ Lat * GDD + elevation, data = mlr))
 
 #produce added variable plots
 car::avPlots(fit)
