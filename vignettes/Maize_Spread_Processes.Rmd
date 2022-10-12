@@ -1504,20 +1504,51 @@ mlr <- MDB_env %>%
                           breaks = seq(-3700, 1500, 100))) %>%
   dplyr::group_by(bin) %>%
   dplyr::mutate(group = dplyr::cur_group_id()) %>%
-  #dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>%
+  dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>%
   dplyr::ungroup()
 
 mlr2 <- mlr %>%
-  dplyr::select(Date, Lat, elevation, GDD)
+  dplyr::select(Date, Lat, elevation, GDD) %>% 
+  dplyr::mutate(dplyr::across(everything(), scales::rescale))
+
+gdd_lat <- lm(GDD ~ Lat, data = mlr2)
+gdd_elev <- lm(GDD ~ elevation, data = mlr2)
+date_lat <- lm(Date ~ Lat, data = mlr2)
+date_elev <- lm(Date ~ elevation, data = mlr2)
+date_gdd <- lm(Date ~ GDD, data = mlr2)
+
+stats_table <-
+  purrr::map_dfr(list(gdd_lat, gdd_elev, date_lat, date_elev, date_gdd), function(x) {
+    x %>%
+      summary() %>%
+      {
+        data.frame(
+          formula = as.character(.$call)[[2]],
+          slope = formatC(.$coefficients[2, 1], digits = 3, format = "f"),
+          r2 = formatC(.$r.squared, digits = 2, format = "f"),
+          pvalue = formatC(.$coefficients[2, 4],
+                           digits = 3,
+                           format = "f"),
+          Fstatistic = formatC(.$fstatistic[[1]],
+                               digits = 2,
+                               format = "f")
+        )
+      } })
+
+
 
 fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
 summary(fit)
 
-fit <- lm(Date ~ GDD * Lat, data = mlr)
+fit <- lm(Date ~ GDD * Lat + elevation * GDD, data = mlr)
 summary(fit)
 
 summary(lm(Date ~ (Lat + GDD + elevation)^2, data = mlr))
-summary(lm(Date ~ Lat * GDD + elevation, data = mlr))
+summary(lm(Date ~ Lat * GDD + elevation * GDD, data = mlr))
+
+anova_table <- anova(fit)
+effectsize(anova_table)
+effectsize(anova_table, type = "f2")
 
 #produce added variable plots
 car::avPlots(fit)
