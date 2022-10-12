@@ -1,0 +1,271 @@
+---
+title: "SWUS Radiocarbon"
+author: "Darcy Bird"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = "#>"
+)
+
+devtools::install()
+devtools::install_github("Archaeo-Programmer/cropDiffusionR")
+library(cropSpreadR)
+```
+
+## load data
+
+
+```{r load-data, echo = FALSE}
+# Load location data for each sample. Site locations are not saved in this repository, as we want to ensure that archaeological site locations are protected.
+sf::sf_use_s2(FALSE)
+
+MDB <- cropDiffusionR::maizeDB %>%
+  dplyr::left_join(.,
+                   readr::read_csv(
+                     stringr::str_remove(
+                       ("/Users/darcy/Dropbox/R/help/agb/Maize_Database_Locations_DONT_DISTRIBUTE.csv"),
+                       "cropSpreadR/"
+                     ),
+                     col_types = readr::cols()
+                   ),
+                   by = "LabID") %>%
+  dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("Long1", "Lat1"),
+               crs = 4326) %>%
+  sf::st_make_valid() %>%
+  # Join to counties data to get county and state information.
+  sf::st_join(cropSpreadR::SWUS_counties) %>%
+  dplyr::mutate(county_st = ifelse(!is.na(REGION) &
+                                     !is.na(NAME), paste(NAME, REGION, sep = ", "), NA)) %>%
+  sf::st_drop_geometry() %>% 
+  suppressMessages()
+
+```
+
+
+``` {r calibrate-data-by-county, echo = FALSE}
+
+sw_rc <- cropSpreadR::sw_rc
+
+sevier_ut <- sw_rc %>% dplyr::filter(county_st == "sevier, utah")
+daggett_ut <- sw_rc %>% dplyr::filter(county_st == "daggett, utah")
+catron_nm <- sw_rc %>% dplyr::filter(county_st == "catron, new mexico")
+navajo_az <- sw_rc %>% dplyr::filter(county_st == "navajo, arizona")
+delta_co <- sw_rc %>% dplyr::filter(county_st == "delta, colorado")
+pima_az <- sw_rc %>% dplyr::filter(county_st =="pima, arizona")
+saltlake_ut <- sw_rc %>% dplyr::filter(county_st ==  "salt lake, utah")
+montrose_co <- sw_rc %>% dplyr::filter(county_st == "montrose, colorado")
+kane_ut <- sw_rc %>% dplyr::filter(county_st == "kane, utah")
+uintah_ut <- sw_rc %>% dplyr::filter(county_st == "uintah, utah")
+boxelder_ut <- sw_rc %>% dplyr::filter(county_st == "box elder, utah")
+sanjuan_ut <- sw_rc %>% dplyr::filter(county_st == "san juan, utah")
+
+ckde_dates <- function(data){
+  cptcal <- rcarbon::calibrate(x = data$Age,
+                               errors = data$Error,
+                               calCurves = data$calib,
+                               verbose = FALSE)
+  sampledDates <- rcarbon::sampleDates(cptcal, nsim = 1000, boot = TRUE)
+  sw_ckde <- rcarbon::ckde(sampledDates, timeRange = c(9000,0),bw = 50)
+}
+
+sevier_ut_ckde <- ckde_dates(sevier_ut)
+daggett_ut_ckde <- ckde_dates(daggett_ut)
+catron_nm_ckde <- ckde_dates(catron_nm)
+navajo_az_ckde <- ckde_dates(navajo_az)
+delta_co_ckde <- ckde_dates(delta_co)
+pima_az_ckde <- ckde_dates(pima_az)
+saltlake_ut_ckde <- ckde_dates(saltlake_ut)
+montrose_co_ckde <- ckde_dates(montrose_co)
+kane_ut_ckde <- ckde_dates(kane_ut)
+uintah_ut_ckde <- ckde_dates(uintah_ut)
+boxelder_ut_ckde <- ckde_dates(boxelder_ut)
+sanjuan_ut_ckde <- ckde_dates(sanjuan_ut)
+
+save(sevier_ut_ckde,daggett_ut_ckde,catron_nm_ckde,navajo_az_ckde,delta_co_ckde, pima_az_ckde, 
+     saltlake_ut_ckde , montrose_co_ckde, kane_ut_ckde, uintah_ut_ckde, boxelder_ut_ckde, sanjuan_ut_ckde,
+     file= ('ckde_results.RData'))
+
+
+
+plot(sevier_ut_ckde)
+
+
+
+
+```
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+  
+
+```{r Figure_5, fig.cap="Figure 5. SPDs by county with the earliest maize plotted for each county.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+MDB3A <- MDB %>%
+  dplyr::filter(Country == "USA") %>%
+  dplyr::select(LabID, Long, Lat, SiteIDName, MedianBP) %>%
+  dplyr::mutate(SiteIDName = ifelse(SiteIDName == "Willard Mounds", "42BO3", SiteIDName))
+
+maize_oldest <- cropSpreadR::sw_rc %>%
+  dplyr::filter(stringr::str_detect(Taxa, "zea|Zea")) %>%
+  dplyr::filter(LabID != "Beta-122953") %>%
+  dplyr::filter(county_st %in% maize_frontier_swus$county_st)
+
+maize_oldest2 <-
+  rcarbon::calibrate(
+    x = maize_oldest$Age,
+    errors = maize_oldest$Error,
+    calCurves = maize_oldest$calib,
+    verbose = FALSE
+  ) %>%
+  summary() %>%
+  dplyr::bind_cols(maize_oldest, .) %>%
+  dplyr::select(county_st, MedianBP, LabID, SiteID, SiteName) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::slice_max(MedianBP, with_ties = FALSE) %>%
+  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
+  dplyr::left_join(.,
+                   MDB %>% dplyr::select(LabID, SiteID, SiteName, SiteIDName),
+                   by = "LabID") %>%
+  dplyr::mutate(
+    SiteID = dplyr::coalesce(SiteID.y, SiteID.x),
+    SiteName = dplyr::coalesce(SiteName.y, SiteName.x),
+    .keep = "unused"
+  ) %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID))
+
+county_centroid <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st, centroid_lat) %>%
+  dplyr::mutate(county_st = tools::toTitleCase(county_st))
+
+by_county_changes <- cropSpreadR::SPD_county %>%
+  dplyr::filter(county_st %in% maize_frontier_swus$county_st) %>%
+  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
+  dplyr::left_join(maize_oldest2, ., by = "county_st") %>%
+  dplyr::left_join(
+    .,
+    cropSpreadR::SWUS_counties %>%
+      sf::st_drop_geometry() %>%
+      dplyr::select(county_st, centroid_lat) %>%
+      dplyr::mutate(county_st = tools::toTitleCase(county_st)),
+    by = "county_st"
+  ) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  # Remove all columns with word site, except for SiteNameID, and remove name and region columns.
+  dplyr::select(-c(starts_with("Site", vars = names(.)[stringr::str_detect(names(.), "SiteNameID", negate = TRUE)]), NAME, REGION, LabID)) %>%
+  tidyr::unnest(cols = c(spds)) %>%
+  dplyr::mutate(
+    MedianBP = ifelse(MedianBP == calBP, MedianBP, NA),
+    SiteNameID = ifelse(!is.na(MedianBP), SiteNameID, NA)
+  ) %>%
+  dplyr::mutate(county_st = paste0(county_st, " (n = ", n, ")")) %>% 
+  dplyr::mutate(date_maize = rcarbon::BPtoBCAD(MedianBP),
+                date_spd = rcarbon::BPtoBCAD(calBP)) %>% 
+  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
+
+
+spd_plot <-
+  ggplot(data = by_county_changes, aes(y = PrDens, x = date_spd)) +
+  geom_line() +
+  geom_point(
+    aes(y = PrDens, x = date_maize),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  ggrepel::geom_label_repel(
+    aes(y = PrDens, x = date_maize, label = SiteNameID),
+    color = "red",
+    cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size = NA
+  ) +
+  theme_bw() +
+  #scale_x_reverse(breaks = seq(0, 6000, 1000), limits = c(6000, 0)) +
+  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.2f", y)
+  ) +
+  facet_wrap( ~ factor(county_st, levels = unique(by_county_changes$county_st)),
+              scales = "free_y",
+              ncol = 1) +
+  xlab("Years BC/AD") +
+  ylab("Summed Probability") +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+spd_plot
+
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/Figure_5.png"),
+#   plot = spd_plot,
+#   width = 16,
+#   height = 18,
+#   dpi = 600
+# )
+
+```
+
