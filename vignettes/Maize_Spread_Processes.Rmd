@@ -1207,13 +1207,13 @@ spd_plot <-
 
 spd_plot
 
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_5.png"),
-  plot = spd_plot,
-  width = 16,
-  height = 18,
-  dpi = 600
-)
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/Figure_5.png"),
+#   plot = spd_plot,
+#   width = 16,
+#   height = 18,
+#   dpi = 600
+# )
 
 ```
 
