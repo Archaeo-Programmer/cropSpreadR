@@ -1215,6 +1215,27 @@ spd_plot
 #   dpi = 600
 # )
 
+
+# Summary of number of samples at each site in each county.
+cropSpreadR::sw_rc %>% 
+  dplyr::filter(county_st %in% c("sevier, utah", "daggett, utah", "catron, new mexico", 
+                                 "navajo, arizona", "delta, colorado", "salt lake, utah", "pima, arizona", 
+                                 "kane, utah", "montrose, colorado", "uintah, utah", "box elder, utah", 
+                                 "san juan, utah")) %>% 
+  dplyr::group_by(SiteIDName, county_st, SiteName) %>% 
+  dplyr::summarise(count = dplyr::n()) %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::mutate(id = dplyr::row_number()) %>% 
+  ggplot(aes(x = id, y = count)) +
+  geom_col() +
+  facet_wrap(. ~ county_st, ncol = 3)
+
+
+
+
+
+
+
 ```
 
 ```{r Figure_6, fig.cap="Figure 6. SPDs by county with the earliest maize plotted for each county.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
