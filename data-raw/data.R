@@ -280,6 +280,8 @@ bad_loc <- p3k14c::p3k14c_data %>%
   # Remove any sites that do not have locations.
   dplyr::filter(!is.na(Long))
 
+incomplete_SiteID <- toupper(c("42BEà", "42SA", "5LPà", "LAà", "42à", "42EMà", "42MDà", "42UNà", "42WNà", "5STà", "BB:6:à", "X:12:2à", "BB:", "AA:", "EE:", paste0(LETTERS, ":")))
+
 # Get all four corners data.
 sw_rc <- p3k14c::p3k14c_data %>%
   dplyr::filter(Province %in% c("Arizona", "New Mexico", "Colorado", "Utah")) %>%
@@ -302,6 +304,47 @@ sw_rc <- p3k14c::p3k14c_data %>%
   dplyr::group_by(LabID) %>%
   dplyr::arrange(LabID, db) %>%
   dplyr::slice(1) %>%
+  dplyr::mutate(
+    # Convert SiteIDs to uppercase for consistency.
+    SiteID = trimws(toupper(SiteID)),
+    # Some siteIDs are incomplete/incorrect, so replace with NA.
+    SiteID = ifelse(SiteID %in% incomplete_SiteID, NA_character_, SiteID),
+    # Remove the parentheses from many of the Arizona sample site IDs.
+    SiteID = trimws(stringr::str_replace(SiteID, " \\s*\\([^\\)]+\\)", "")),
+    # Also, remove the starting AZ on some of the Arizona sample site IDs.
+    SiteID = stringr::str_replace(SiteID, "^(AZ )", "")
+  ) %>%
+  # Remove the leading 0s on some siteIDs so that these are consistent.
+  # First, we separate the beginning part of the SiteID from the ending number.
+  tidyr::separate(
+    SiteID,
+    into = c("SiteID1", "SiteID2"),
+    "(?<=[[:alpha:]][[:alpha:]])",
+    remove = FALSE
+  ) %>%
+  # Then, convert to numeric to remove any leading 0s. This does not apply to Arizona sites, since the numbering systems are different.
+  dplyr::mutate(
+    SiteID2 = as.numeric(SiteID2),
+    SiteID = ifelse(
+      Province != "Arizona" &
+        SiteID2 > 0 &
+        !SiteName %in% c("CKL-1-190810-8-1", "PY0810-1-1", "LA 18091"),
+      paste0(SiteID1, SiteID2),
+      SiteID
+    )
+  ) %>%
+  dplyr::select(-c(SiteID1, SiteID2)) %>%
+  # Fill in any missing site IDs by SiteName.
+  dplyr::group_by(SiteName) %>%
+  tidyr::fill(SiteID, .direction = "updown") %>%
+  # Fill in any missing site names by SiteID.
+  dplyr::group_by(SiteID) %>%
+  tidyr::fill(SiteName, .direction = "updown") %>%
+  dplyr::mutate(SiteIDName = dplyr::coalesce(SiteID, SiteName)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(Province) %>%
+  dplyr::arrange(Province, !is.na(SiteIDName)) %>%
+  dplyr::mutate(SiteIDName = ifelse(is.na(SiteIDName), paste(Province, dplyr::row_number()), SiteIDName)) %>%
   # Convert to spatial object
   sf::st_as_sf(coords = c("Long", "Lat"),
                crs = 4326) %>%
@@ -312,6 +355,7 @@ sw_rc <- p3k14c::p3k14c_data %>%
   dplyr::select(LabID,
                 SiteID,
                 SiteName,
+                SiteIDName,
                 county_st,
                 NAME,
                 REGION,
