@@ -133,7 +133,7 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```
 
-```{r  Figure_1, fig.cap="Figure 1. swus_date_distribution.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
+```{r  Figure_1, fig.cap="Figure 1. Frequency distribution of directly dated maize macrofossils in our maize database for sites that are north of 30° latitude and older than AD 1500 (n = 985), distinguishing between the earliest maize sample at each site (n = 275), and all other maize samples fitting the criteria above (n = 710). Two of the earliest maize sites, Las Capas and Old Corn, are individually labeled.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
 
 maize_earliest_distribution <-  MDB_env %>%
   dplyr::filter(Lat > 30 & Date < 1500) %>%
@@ -266,7 +266,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_2, fig.cap="Figure 2. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_2, fig.cap="Figure 2. Spread rates for maize beginning from Guilà Naquitz to sites in the US Southwest on maize’s northern frontier as defined in the text. A) Only change in northing contributes to the distance categories differentiated in the legend. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
   maize_frontier_mexico %>%
@@ -654,7 +654,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_3, fig.cap="Figure 3. maize_frontier", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_3, fig.cap="Figure 3. Spread rates for maize beginning from Las Capas to sites in the US Southwest on the MNF as defined in the text. A) Only change in northing contributes to the distance categories differentiated in the legend. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 nodes1 <-
   maize_frontier_swus %>%
@@ -982,7 +982,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_4, fig.cap="Figure 4. GDD and elevation for Four Corners", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_4, fig.cap="Figure 4. Location of sites on the maize northern frontier and other sites mentioned in the text relative to A) elevation and B) annual accumulated GDDs (°C).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 # GDD Map
 # Get raster for the North American Southwest and convert to a dataframe.
@@ -1187,7 +1187,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_5, fig.cap="Figure 5. Box plots showing elevation, GDD, and latitude for each sample in our maize database, which includes 1,043 samples) through time (Gillreath-Brown and Kohler n.d. 2022). The samples have been binned into 500 year time slices and plotted on the midpoint of the 500 year time bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_5, fig.cap="Figure 5. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (A. Gillreath-Brown and Kohler, n.d.), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 500-year periods and plotted on the midpoint of each bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 MDB_env2 <- MDB_env %>%
   dplyr::filter(Lat >= 30 & Date < 1500) %>%
@@ -1262,7 +1262,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_6, fig.cap="Figure 6. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_6, fig.cap="Figure 6. A directed acyclic graph of the relationships between the ages of maize on the MFN and the latitude, elevation, and GDD for the sites with this maize. Beta weights on each arrow indicate the size of the effect of the independent variable on the dependent. Solid lines indicate a significant effect (at p < 0.01); the dashed line indicates an effect that is not significant.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 dag_coords <-
   tibble::tibble(
@@ -1334,7 +1334,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_7, fig.cap="Figure 7. The moving northern frontier of maize cultivation relative to the SPDs for the counties in the four-state southwestern United States that are on the northern maize frontier through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in y scales.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_7, fig.cap="Figure 7. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 MDB3A <- MDB %>%
   dplyr::filter(Country == "USA") %>%
