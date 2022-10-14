@@ -1334,7 +1334,110 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_7, fig.cap="Figure 7. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_7, fig.cap="Figure 7. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+nodes1 <-
+  maize_frontier_swus %>%
+  dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName)) %>%
+  dplyr::arrange(Date) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  dplyr::select(id, Long, Lat, SiteName, Date) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+                delta = as.numeric(sprintf("%.2f", delta)))
+
+anom_point <- temp_anom %>%
+  dplyr::select(year, anom) %>%
+  dplyr::mutate(anom_25 = dplyr::lag(anom, 25),
+                anom_50 = dplyr::lag(anom, 50),
+                anom_75 = dplyr::lag(anom, 75),
+                anom_100 = dplyr::lag(anom, 100),
+                anom_200 = dplyr::lag(anom, 200))
+
+lags_point <- nodes1 %>%
+  dplyr::filter(SiteName != "Las Capas") %>%
+  dplyr::left_join(., anom_point, by = c("Date" = "year"))
+
+lm(delta ~ anom_25, data = lags_point) %>% 
+  summary()
+
+
+## Get fit, and make a variable with labels for points outside conf. interval
+fit <- lm(delta ~ anom_25, data = lags_point)
+dat <- predict(fit, interval = "confidence")
+
+lags_point$inside <-
+  ifelse(lags_point$delta < dat[, "upr"] &
+           lags_point$delta > dat[, "lwr"], "", as.character(lags_point$SiteName))
+
+temp_spreadrate <- lags_point %>%
+  ggplot2::ggplot(aes(x = anom_25, y = delta)) +
+  geom_point(size = 4) +
+  stat_smooth(method = "lm", size = 2) +
+  scale_x_continuous(breaks = seq(-1.5, 0, 0.25)) +
+  scale_y_continuous(breaks = seq(-0.4, 1.0, 0.2)) +
+  ggrepel::geom_text_repel(
+    aes(label = inside),
+    cex = 6.5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1
+  ) +
+  theme_bw() +
+  xlab("Temperature Anomaly (°C)") +
+  ylab("\u0394 km N/year") +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/temp_anom_spreadrate.png"),
+  plot = temp_spreadrate,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+
+
+```
+
+
+```{r Figure_8, fig.cap="Figure 8. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -1540,7 +1643,7 @@ ckde_plot <-
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_7.png"),
+  filename = here::here("vignettes/figures/Figure_8.png"),
   plot = ckde_plot,
   width = 16,
   height = 18,
@@ -1549,7 +1652,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_9, fig.cap="Figure 9. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 # Get sites that are on the northern maize frontier through time from cropDiffusionR package.
 temp <- tempfile()
@@ -1612,7 +1715,7 @@ spd_counties <- ggplot(data = SWUS_counties_fill) +
   )
   
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_8.png"),
+  filename = here::here("vignettes/figures/Figure_9.png"),
   plot = spd_counties,
   width = 15.51,
   height = 10.32,
