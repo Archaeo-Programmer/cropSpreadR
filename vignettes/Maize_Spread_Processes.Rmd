@@ -1336,6 +1336,298 @@ ggplot2::ggsave(
 
 ```{r Figure_7, fig.cap="Figure 7. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
+sw_rc <- cropSpreadR::sw_rc
+
+ckde_dates <- function(data, interval = 0.95){
+  cptcal <- rcarbon::calibrate(x = data$Age,
+                               errors = data$Error,
+                               calCurves = data$calib,
+                               verbose = FALSE)
+  sampledDates <- rcarbon::sampleDates(cptcal, nsim = 1000, boot = TRUE)
+  sw_ckde <- rcarbon::ckde(sampledDates, timeRange = c(9000,0),bw = 50)
+
+  avg = apply(sw_ckde$res.matrix, 1, mean, na.rm = TRUE)
+  lo = apply(sw_ckde$res.matrix,
+             1,
+             quantile,
+             prob = (1 - interval) / 2,
+             na.rm = TRUE)
+  hi = apply(sw_ckde$res.matrix,
+             1,
+             quantile,
+             prob = interval + (1 - interval) / 2,
+             na.rm = TRUE)
+
+  data.frame(Date = 9000:0, avg, lo, hi) %>%
+    dplyr::mutate(Date = rcarbon::BPtoBCAD(Date)) %>%
+    tidyr::drop_na(lo, hi)
+
+}
+
+#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
+frontier_counties <- c("sevier, utah", "daggett, utah", "catron, new mexico",
+                       "navajo, arizona", "salt lake, utah", "pima, arizona",
+                       "kane, utah", "montrose, colorado", "uintah, utah", "box elder, utah",
+                       "san juan, utah")
+
+ckde_test1 <- sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties) %>%
+  dplyr::select(SiteIDName, county_st, Age, Error, calib)
+
+# Inspect for outlying sites (i.e., sites that have a lot of samples for when number of sites overall is relatively low).
+cropSpreadR::sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties) %>%
+  dplyr::group_by(SiteIDName, county_st, SiteName) %>%
+  dplyr::summarise(count = dplyr::n()) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(id = dplyr::row_number()) %>%
+  ggplot(aes(x = count)) +
+  geom_histogram(binwidth = 10) +
+  scale_x_continuous(breaks = seq(0, 150, 25)) +
+  facet_wrap(. ~ county_st, ncol = 3)
+
+sites_to_subsample <- c("42BO1", "42SV1686")
+
+ckde_test2 <- ckde_test1 %>%
+  dplyr::filter(SiteIDName %in% sites_to_subsample) %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_sample(prop = 0.2, replace = TRUE) %>%
+  dplyr::bind_rows(ckde_test1 %>% dplyr::filter(!SiteIDName %in% sites_to_subsample), ., ) %>%
+  dplyr::select(-SiteIDName) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(n = dplyr::n()) %>%
+  dplyr::group_by(n, .add = TRUE) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(ckde = purrr::map(data, ckde_dates)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest(ckde)
+
+county_order <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st, centroid_lat) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  dplyr::filter(county_st %in% frontier_counties) %>%
+  dplyr::pull(county_st)
+
+maize_oldest <- cropSpreadR::sw_rc %>%
+  dplyr::filter(stringr::str_detect(Taxa, "zea|Zea")) %>%
+  dplyr::filter(LabID != "Beta-122953") %>%
+  dplyr::filter(county_st %in% maize_frontier_swus$county_st)
+
+maize_oldest2 <-
+  rcarbon::calibrate(
+    x = maize_oldest$Age,
+    errors = maize_oldest$Error,
+    calCurves = maize_oldest$calib,
+    verbose = FALSE
+  ) %>%
+  summary() %>%
+  dplyr::bind_cols(maize_oldest, .) %>%
+  dplyr::select(county_st, MedianBP, LabID, SiteID, SiteName) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::slice_max(MedianBP, with_ties = FALSE) %>%
+  dplyr::left_join(.,
+                   MDB %>% dplyr::select(LabID, SiteID, SiteName, SiteIDName),
+                   by = "LabID") %>%
+  dplyr::mutate(
+    SiteID = dplyr::coalesce(SiteID.y, SiteID.x),
+    SiteName = dplyr::coalesce(SiteName.y, SiteName.x),
+    .keep = "unused"
+  ) %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>%
+  dplyr::mutate(Date = rcarbon::BPtoBCAD(MedianBP)) %>%
+  dplyr::select(county_st, Date, SiteNameID) %>%
+  dplyr::mutate(date_maize = Date)
+
+ckde_test3 <- ckde_test2 %>%
+  dplyr::left_join(., maize_oldest2, by = c("county_st", "Date")) %>%
+  dplyr::mutate(county_st2 = county_st,
+                county_st = tools::toTitleCase(county_st),
+                county_st = paste0(county_st, " (n = ", n, ")")) %>%
+  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
+
+county_order <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st2 = county_st, centroid_lat) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  dplyr::filter(county_st2 %in% frontier_counties) %>%
+  dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = "county_st2") %>%
+  dplyr::pull(county_st)
+
+
+ckde_plot <-
+  ggplot(data = ckde_test3, aes(y = avg, x = Date)) +
+  geom_ribbon(aes(ymin=lo, ymax=hi),
+              alpha=0.4,
+              fill="grey70") +
+  geom_line() +
+  geom_point(
+    aes(y = avg, x = date_maize),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  ggrepel::geom_label_repel(
+    aes(y = avg, x = date_maize, label = SiteNameID),
+    color = "red",
+    cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size = NA
+  ) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.4f", y)
+  ) +
+  facet_wrap( ~ factor(county_st, levels = county_order),
+              scales = "free_y",
+              ncol = 1) +
+  xlab("Years BC/AD") +
+  ylab("Composite Kernel Density Estimates") +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_7.png"),
+  plot = ckde_plot,
+  width = 16,
+  height = 18,
+  dpi = 600
+)
+
+```
+
+```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+# Get sites that are on the northern maize frontier through time from cropDiffusionR package.
+temp <- tempfile()
+download.file(
+  "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_swus.rds",
+  temp
+)
+maize_frontier_swus <-
+  readr::read_rds(temp, "maize_frontier_swus.rds") %>% 
+  dplyr::left_join(., MDB %>% dplyr::select(LabID, Long, Lat), by = "LabID")
+unlink(temp)
+
+# Create new column for fill, which will be used for plotting. Grey if the county occurs on the maize northern frontier, and blank if it does not.
+SWUS_counties_fill <- cropSpreadR::SWUS_counties %>% 
+  dplyr::mutate(fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
+                label = ifelse(county_st %in% maize_frontier_swus$county_st, tools::toTitleCase(NAME), NA))
+
+# Plot.
+spd_counties <- ggplot(data = SWUS_counties_fill) +
+  geom_sf(
+    color = "black",
+    fill = SWUS_counties_fill$fill,
+    size = 0.25
+  ) +
+    ggrepel::geom_label_repel(
+    aes(label = label, geometry = geom),
+    stat = "sf_coordinates",
+    min.segment.length = 0.1,
+    size = 7
+  ) +
+  #   geom_label_repel(
+  #   aes(y = PrDens, x = MedianBP, label = SiteNameID),
+  #   color = "red",
+  #   cex = 5,
+  #   show.legend  = F,
+  #   min.segment.length = unit(0.1, 'lines'),
+  #   box.padding = 1,
+  #   nudge_x = -550,
+  #   nudge_y = 0.35,
+  #   fill = alpha(c("white"), 0.6),
+  #   label.size = NA
+  # ) +
+  coord_sf() +
+  theme_bw() +
+  theme(
+    legend.position = c(.15, .2),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 15, family = "Helvetica"),
+    legend.title = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    )
+  )
+  
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_8.png"),
+  plot = spd_counties,
+  width = 15.51,
+  height = 10.32,
+  dpi = 600
+)
+
+```
+
+
+# Supplemental Figures
+
+
+
+```{r Figure_S2, fig.cap="Figure S2. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
 MDB3A <- MDB %>%
   dplyr::filter(Country == "USA") %>%
   dplyr::select(LabID, Long, Lat, SiteIDName, MedianBP) %>%
@@ -1510,77 +1802,7 @@ cropSpreadR::sw_rc %>%
 
 ```
 
-```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
-# Get sites that are on the northern maize frontier through time from cropDiffusionR package.
-temp <- tempfile()
-download.file(
-  "https://raw.githubusercontent.com/Archaeo-Programmer/cropDiffusionR/master/vignettes/output/maize_frontier_swus.rds",
-  temp
-)
-maize_frontier_swus <-
-  readr::read_rds(temp, "maize_frontier_swus.rds") %>% 
-  dplyr::left_join(., MDB %>% dplyr::select(LabID, Long, Lat), by = "LabID")
-unlink(temp)
-
-# Create new column for fill, which will be used for plotting. Grey if the county occurs on the maize northern frontier, and blank if it does not.
-SWUS_counties_fill <- cropSpreadR::SWUS_counties %>% 
-  dplyr::mutate(fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
-                label = ifelse(county_st %in% maize_frontier_swus$county_st, tools::toTitleCase(NAME), NA))
-
-# Plot.
-spd_counties <- ggplot(data = SWUS_counties_fill) +
-  geom_sf(
-    color = "black",
-    fill = SWUS_counties_fill$fill,
-    size = 0.25
-  ) +
-    ggrepel::geom_label_repel(
-    aes(label = label, geometry = geom),
-    stat = "sf_coordinates",
-    min.segment.length = 0.1,
-    size = 7
-  ) +
-  #   geom_label_repel(
-  #   aes(y = PrDens, x = MedianBP, label = SiteNameID),
-  #   color = "red",
-  #   cex = 5,
-  #   show.legend  = F,
-  #   min.segment.length = unit(0.1, 'lines'),
-  #   box.padding = 1,
-  #   nudge_x = -550,
-  #   nudge_y = 0.35,
-  #   fill = alpha(c("white"), 0.6),
-  #   label.size = NA
-  # ) +
-  coord_sf() +
-  theme_bw() +
-  theme(
-    legend.position = c(.15, .2),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_blank(),
-    axis.text.x = element_blank(),
-    axis.title = element_blank(),
-    axis.line = element_blank(),
-    axis.ticks = element_blank(),
-    legend.text = element_text(size = 15, family = "Helvetica"),
-    legend.title = element_text(
-      size = 16,
-      family = "Helvetica",
-      face = "bold"
-    )
-  )
-  
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_8.png"),
-  plot = spd_counties,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
-)
-
-```
 
 ```{r multi_regression}
 
