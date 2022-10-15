@@ -56,7 +56,8 @@ Imports:
     gganimate,
     ggsci,
     p3k14c,
-    terra
+    terra,
+    ggdag
 Remotes: 
     zeehio/facetscales,
     Archaeo-Programmer/paleomat

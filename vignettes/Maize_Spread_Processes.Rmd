@@ -133,9 +133,11 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```
 
+
+
 ```{r  Figure_1, fig.cap="Figure 1. Frequency distribution of directly dated maize macrofossils in our maize database for sites that are north of 30° latitude and older than AD 1500 (n = 985), distinguishing between the earliest maize sample at each site (n = 275), and all other maize samples fitting the criteria above (n = 710). Two of the earliest maize sites, Las Capas and Old Corn, are individually labeled.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
 
-maize_earliest_distribution <-  MDB_env %>%
+maize_earliest_distribution <- MDB_env %>%
   dplyr::filter(Lat > 30 & Date < 1500) %>%
   dplyr::group_by(SiteIDName) %>%
   dplyr::slice_min(Date, with_ties = FALSE) %>%
@@ -149,7 +151,9 @@ full_distribution <- MDB_env %>%
 swus_date_distribution_stacked <- maize_earliest_distribution %>%
   dplyr::bind_rows(., full_distribution) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(sample = factor(sample, levels = c("Full Maize Database", "Earliest Maize Subset"))) %>%
+  dplyr::mutate(sample = factor(sample, levels = c(
+    "Full Maize Database", "Earliest Maize Subset"
+  ))) %>%
   ggplot(aes(x = Date, fill = sample)) +
   geom_histogram(
     binwidth = 100,
@@ -388,26 +392,24 @@ country_shapes2 <-
   )
 
 mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521, -92),
+  ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
 legend.breaks = 3
 
 
 # Figure 2a. Change in N latitude (°) per year.
-edges1 <- data.frame(from = 1:13,
+edges2a <- data.frame(from = 1:13,
                      to = 2:14,
                      color = nodes1$delta_lat_km[!is.na(nodes1$delta_lat_km)])
 
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
-
-edges_for_plot1 <- edges1 %>%
+edges_for_plot2a <- edges2a %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
   dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+assertthat::assert_that(nrow(edges_for_plot2a) == nrow(edges2a))
 
 maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
@@ -421,7 +423,7 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
       color = color
     ),
     arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
+    data = edges_for_plot2a,
     curvature = 0.3,
     alpha = 1.0,
     size = 1.0
@@ -473,19 +475,17 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
 
 
 # Figure 2b. Change in euclidean distance (km) per year.
-edges1 <- data.frame(from = 1:13,
+edges2b <- data.frame(from = 1:13,
                      to = 2:14,
                      color = nodes1$delta_km[!is.na(nodes1$delta_km)])
 
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes1)
-
-edges_for_plot1 <- edges1 %>%
+edges_for_plot2b <- edges2b %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
   dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+assertthat::assert_that(nrow(edges_for_plot2b) == nrow(edges2b))
 
 maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   country_shapes1 +
@@ -499,7 +499,7 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
       color = color
     ),
     arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
+    data = edges_for_plot2b,
     curvature = 0.3,
     alpha = 1.0,
     size = 1.0
@@ -573,8 +573,8 @@ ggplot2::ggsave(
 
 ```{r Figure_3, fig.cap="Figure 3. Spread rates for maize beginning from Las Capas to sites in the US Southwest on the MNF as defined in the text. A) Only change in northing contributes to the distance categories differentiated in the legend. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
-nodes2 <- nodes1 %>% 
-  dplyr::filter(name != "Guilá Naquitz") %>% 
+nodes2 <- nodes1 %>%
+  dplyr::filter(name != "Guilá Naquitz") %>%
   dplyr::mutate(id = dplyr::row_number())
 
 country_shapes1 <-
@@ -587,26 +587,23 @@ country_shapes1 <-
   )
 
 mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-105),
+  ggplot2::coord_fixed(xlim = c(-114.814521, -105),
                        ylim = c(31.333254, 42))
 
 legend.breaks = 3
 
-edges1 <- data.frame(
-  from = 1:12,
-  to = 2:13,
-  color = nodes2$delta_lat_km[!is.na(nodes2$delta_lat_km)]
-)
+# Figure 3a. Change in km North latitude per year.
+edges3a <- data.frame(from = 1:12,
+                      to = 2:13,
+                      color = nodes2$delta_lat_km[-1])
 
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes2)
-
-edges_for_plot1 <- edges1 %>%
+edges_for_plot3a <- edges3a %>%
   dplyr::inner_join(nodes2 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
   dplyr::inner_join(nodes2 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
   dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+assertthat::assert_that(nrow(edges_for_plot3a) == nrow(edges3a))
 
 maize_frontier_SW_delta_Lat <- ggplot(nodes2) +
   country_shapes1 +
@@ -616,44 +613,17 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes2) +
       y = y,
       xend = xend,
       yend = yend,
-      #size = color,
       color = color
     ),
     arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
+    data = edges_for_plot3a,
     curvature = 0.3,
     alpha = 1.0,
     size = 1.0
   ) +
-  scale_color_distiller(palette = "RdYlGn", direction = 1, name = "\u0394 km N/year") +
-  # scale_color_distiller(
-  #   name = "\u0394 km N/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   )),
-  #      palette = "RdYlGn",
-  #  direction = "horizontal"
-  # ) +
-  # scale_size_continuous(
-  #   name = "\u0394 km N/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ))
-  # ) +    # scale for node size
+  scale_color_distiller(palette = "RdYlGn",
+                        direction = 1,
+                        name = "\u0394 km N/year") +
   geom_point(
     aes(x = lon, y = lat),
     # draw nodes
@@ -671,24 +641,17 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes2) +
     min.segment.length = 0.15,
     fill = alpha(c("white"), 0.7),
     force = 34,
-    # nudge_x = -0.51,
-    # nudge_y = 0.15,
     family = "Helvetica"
   ) +
-  #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
-  # ggsn::north(x.min = -114, x.max = -114.08, 
-  #             y.min = 31, y.max = 31.3, scale = 1.5) +
   theme_void() +
   theme(
-    plot.margin = grid::unit(c(2,2,2,2), "mm"),
-    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
-    #legend.position = c(0.787, 0.764),
-    legend.box.spacing = unit(15.0, "pt"),
-    legend.key.size = unit(0.7, "cm"),
-    legend.text = element_text(size = 16, family = "Helvetica"),
+    plot.margin = grid::unit(c(2, 2, 2, 2), "mm"),
+    legend.box.spacing = unit(20.0, "pt"),
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 14, family = "Helvetica"),
     legend.title = element_text(
-      size = 21,
+      size = 18,
       face = "bold",
       family = "Helvetica"
     )
@@ -702,36 +665,18 @@ maize_frontier_SW_delta_Lat <- ggplot(nodes2) +
 #   dpi = 600
 # )
 
+# Figure 3b. Change in euclidean distance (km) per year.
+edges3b <- data.frame(from = 1:12,
+                      to = 2:13,
+                      color = nodes2$delta_km[-1])
 
-edges1 <- data.frame(
-  from = 1:12,
-  to = 2:13,
-  color = nodes2$delta_km[!is.na(nodes2$delta_km)]
-)
-
-g1 <-
-  igraph::graph_from_data_frame(edges1, directed = FALSE, vertices = nodes2)
-
-edges_for_plot1 <- edges1 %>%
+edges_for_plot3b <- edges3b %>%
   dplyr::inner_join(nodes2 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
   dplyr::inner_join(nodes2 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
   dplyr::rename(xend = lon, yend = lat)
-assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
 
-country_shapes1 <-
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('state'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521,-105),
-                       ylim = c(31.333254, 42))
-
-legend.breaks = 3
+assertthat::assert_that(nrow(edges_for_plot3b) == nrow(edges3b))
 
 maize_frontier_SW_delta_euclidean <- ggplot(nodes2) +
   country_shapes1 +
@@ -741,44 +686,17 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes2) +
       y = y,
       xend = xend,
       yend = yend,
-      #size = color,
       color = color
     ),
     arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
-    data = edges_for_plot1,
+    data = edges_for_plot3b,
     curvature = 0.3,
     alpha = 1.0,
     size = 1.0
   ) +
-  scale_color_distiller(palette = "RdYlGn", direction=1, name = "\u0394 km ED/year") +
-  # scale_color_distiller(
-  #   name = "\u0394 km ED/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   )),
-  #      palette = "RdYlGn",
-  #  direction="horizontal"
-  # ) +
-  # scale_size_continuous(
-  #   name = "\u0394 km ED/year",
-  #   breaks = seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ),
-  #   labels = sprintf("%.2f", seq(
-  #     min(edges_for_plot1$color),
-  #     max(edges_for_plot1$color),
-  #     length.out = legend.breaks
-  #   ))
-  # ) +    # scale for node size
+  scale_color_distiller(palette = "RdYlGn",
+                        direction = 1,
+                        name = "\u0394 km ED/year") +
   geom_point(
     aes(x = lon, y = lat),
     # draw nodes
@@ -800,25 +718,20 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes2) +
     nudge_y = 0.15,
     family = "Helvetica"
   ) +
-  #guides(color = guide_legend(), size = guide_legend()) +
   mapcoords1 +
   theme_void() +
   theme(
-    plot.title = element_text(size=19, face = "bold", family = "Helvetica"),
-    plot.margin = grid::unit(c(2,2,2,2), "mm"),
-    #legend.position = c(0.787, 0.764),
-    legend.box.spacing = unit(15.0, "pt"),
-    legend.key.size = unit(0.7, "cm"),
-    legend.text = element_text(size = 16, family = "Helvetica"),
+    legend.box.spacing = unit(20.0, "pt"),
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 14, family = "Helvetica"),
     legend.title = element_text(
-      size = 21,
+      size = 18,
       face = "bold",
       family = "Helvetica"
     )
   )
-  #labs(title = "Change in Euclidean Distance (km) per Year")
 
-# ggplot2::ggsave( 
+# ggplot2::ggsave(
 #   filename = here::here("vignettes/figures/spread_rate_euclidean.png"),
 #   plot = maize_frontier_SW_delta_euclidean,
 #   width = 15.51,
@@ -826,12 +739,23 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes2) +
 #   dpi = 600
 # )
 
-Figure_3 <- cowplot::plot_grid(maize_frontier_SW_delta_Lat, maize_frontier_SW_delta_euclidean, labels = "AUTO", label_x = 0.253, label_y = 0.99, align = "v", nrow = 2, ncol = 1)
+Figure_3 <-
+  cowplot::plot_grid(
+    maize_frontier_SW_delta_Lat,
+    maize_frontier_SW_delta_euclidean,
+    labels = "AUTO",
+    label_x = 0.233,
+    label_y = 0.99,
+    align = "v",
+    nrow = 2,
+    ncol = 1
+  )
+
 ggplot2::ggsave(
   Figure_3,
   filename = here::here("vignettes/figures/Figure_3.png"),
-  # width = 30.24,
-  # height = 18.26,
+  width = 13.7,
+  height = 10.2,
   dpi = 900
 )
 
@@ -840,6 +764,7 @@ ggplot2::ggsave(
 ```{r Figure_4, fig.cap="Figure 4. Location of sites on the maize northern frontier and other sites mentioned in the text relative to A) elevation and B) annual accumulated GDDs (°C).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 # GDD Map
+
 # Get raster for the North American Southwest and convert to a dataframe.
 gdd_cropped <-
   raster::crop(cropSpreadR::PRISM_annual_gdd, cropDiffusionR::swus_states)
@@ -859,7 +784,7 @@ NASW_gdd_data_transformed <-
   )
 
 maize_frontier_swus_tp <- maize_frontier_swus %>%
-  dplyr::mutate(`Site Type` = "Maize Frontier") %>% 
+  dplyr::mutate(`Site Type` = "Maize Frontier") %>%
   dplyr::bind_rows(
     .,
     MDB %>%
@@ -869,9 +794,9 @@ maize_frontier_swus_tp <- maize_frontier_swus %>%
       # Convert to spatial object
       sf::st_as_sf(coords = c("Long1", "Lat1"),
                    crs = 4326) %>%
-      sf::st_make_valid() %>% 
+      sf::st_make_valid() %>%
       dplyr::mutate(`Site Type` = "Other")
-  ) %>% 
+  ) %>%
   dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName))
 
 GDD_output <- ggplot2::ggplot(data = NASW_gdd_data_transformed) +
@@ -904,7 +829,7 @@ scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, 
   ) +
   geom_sf(
     data = maize_frontier_swus_tp,
-    aes(geometry = geometry, 
+    aes(geometry = geometry,
         shape = `Site Type`),
     inherit.aes = FALSE,
     size = 4,
@@ -921,7 +846,7 @@ scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, 
     size = 4.5,
     inherit.aes = FALSE,
     max.overlaps = 20,
-    fill = alpha(c("white"),0.7)
+    fill = alpha(c("white"), 0.7)
   ) +
   theme(
     #legend.position = c(.15, .2),
@@ -971,9 +896,11 @@ NED_output <- ggplot2::ggplot(data = swus_NED_transformed) +
   #   name = "Annual GDDs "
   # ) +
 #For GDD raster in color.
-scale_fill_gradientn(colors = grDevices::colorRampPalette(MetBrewer::met.brewer("VanGogh3"))(256),
-                     na.value = "transparent",
-                     name = "Elevation (m)") +
+scale_fill_gradientn(
+  colors = grDevices::colorRampPalette(MetBrewer::met.brewer("VanGogh3"))(256),
+  na.value = "transparent",
+  name = "Elevation (m)"
+) +
   coord_equal() +
   theme_bw() +
   geom_sf(
@@ -985,7 +912,7 @@ scale_fill_gradientn(colors = grDevices::colorRampPalette(MetBrewer::met.brewer(
   ) +
   geom_sf(
     data = maize_frontier_swus_tp,
-    aes(geometry = geometry, 
+    aes(geometry = geometry,
         shape = `Site Type`),
     inherit.aes = FALSE,
     size = 4,
@@ -1002,7 +929,7 @@ scale_fill_gradientn(colors = grDevices::colorRampPalette(MetBrewer::met.brewer(
     size = 4.5,
     inherit.aes = FALSE,
     max.overlaps = 20,
-    fill = alpha(c("white"),0.7)
+    fill = alpha(c("white"), 0.7)
   ) +
   theme(
     #legend.position = c(.15, .2),
@@ -1021,24 +948,22 @@ scale_fill_gradientn(colors = grDevices::colorRampPalette(MetBrewer::met.brewer(
     )
   )
 
+fig_envA <-
+  cowplot::plot_grid(
+    NED_output,
+    GDD_output,
+    labels = "AUTO",
+    label_x = 0.26,
+    align = "v",
+    nrow = 2,
+    ncol = 1
+  )
 
-fig_envA <- cowplot::plot_grid(NED_output, GDD_output, labels = "AUTO", label_x = 0.26, align = "v", nrow = 2, ncol = 1)
 ggplot2::ggsave(
   fig_envA,
   filename = here::here("vignettes/figures/Figure_4.png"),
-  # width = 30.24,
-  # height = 18.26,
   dpi = 600
 )
-
-# fig_envB <- cowplot::plot_grid(NED_output, GDD_output, labels = "AUTO", label_x = 0.21, align = "v", ncol = 1)
-# ggplot2::ggsave(
-#   fig_envB,
-#   filename = here::here("vignettes/figures/fig_envb.png"),
-#   width = 16.72,
-#   height = 18.26,
-#   dpi = 600
-# )
 
 ```
 
@@ -1047,23 +972,29 @@ ggplot2::ggsave(
 MDB_env2 <- MDB_env %>%
   dplyr::filter(Lat >= 30 & Date < 1500) %>%
   dplyr::group_by(SiteIDName) %>%
-  dplyr::slice_min(Date, with_ties = FALSE) %>% 
-  dplyr::group_by(gr = cut(Date,
-                           breaks = seq(-4000, 1500, 500),
-                           labels = seq(-3750, 1250, 500))) %>% 
-  dplyr::mutate(date2 = as.numeric(as.character(gr))) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::select(-gr) %>% 
-  dplyr::arrange(date2) %>% 
+  dplyr::slice_min(Date, with_ties = FALSE) %>%
+  dplyr::group_by(gr = cut(
+    Date,
+    breaks = seq(-4000, 1500, 500),
+    labels = seq(-3750, 1250, 500)
+  )) %>%
+  dplyr::mutate(date2 = as.numeric(as.character(gr))) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-gr) %>%
+  dplyr::arrange(date2) %>%
   dplyr::rename(Latitude = Lat, Elevation = elevation)
 
-env_summaries <- MDB_env2 %>% 
+env_summaries <- MDB_env2 %>%
   dplyr::summarise(dplyr::across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
 
 env_summaries_bp <-
   MDB_env2 %>%
   dplyr::select(date2, Latitude, GDD, Elevation) %>%
-  dplyr::rename(`Latitude (°)` = Latitude, `Annual GDD (°C)` = GDD, `Elevation (m)` = Elevation) %>% 
+  dplyr::rename(
+    `Latitude (°)` = Latitude,
+    `Annual GDD (°C)` = GDD,
+    `Elevation (m)` = Elevation
+  ) %>%
   tidyr::pivot_longer(-date2) %>%
   ggplot(aes(
     x = factor(date2),
@@ -1081,7 +1012,6 @@ env_summaries_bp <-
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 12),
     axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
     axis.text = element_text(
       size = 26,
       colour = "black",
@@ -1117,6 +1047,49 @@ ggplot2::ggsave(
 
 ```
 
+```{r multiple_linear_regression}
+
+mlr <- MDB_env %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_min(Date) %>%
+  dplyr::filter(Lat >= 30 & Date < 1500) %>%
+  dplyr::mutate(bin = cut(Date,
+                          breaks = seq(-3700, 1500, 100))) %>%
+  dplyr::group_by(bin) %>%
+  dplyr::mutate(group = dplyr::cur_group_id()) %>%
+  dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>%
+  dplyr::ungroup()
+
+mlr2 <- mlr %>%
+  dplyr::select(Date, Lat, elevation, GDD) %>% 
+  dplyr::mutate(dplyr::across(everything(), scales::rescale))
+
+gdd_lat <- lm(GDD ~ Lat, data = mlr2)
+gdd_elev <- lm(GDD ~ elevation, data = mlr2)
+date_lat <- lm(Date ~ Lat, data = mlr2)
+date_elev <- lm(Date ~ elevation, data = mlr2)
+date_gdd <- lm(Date ~ GDD, data = mlr2)
+
+stats_table <-
+  purrr::map_dfr(list(gdd_lat, gdd_elev, date_lat, date_elev, date_gdd), function(x) {
+    x %>%
+      summary() %>%
+      {
+        data.frame(
+          formula = as.character(.$call)[[2]],
+          slope = formatC(.$coefficients[2, 1], digits = 3, format = "f"),
+          r2 = formatC(.$r.squared, digits = 2, format = "f"),
+          pvalue = formatC(.$coefficients[2, 4],
+                           digits = 3,
+                           format = "f"),
+          Fstatistic = formatC(.$fstatistic[[1]],
+                               digits = 2,
+                               format = "f")
+        )
+      } })
+
+```
+
 ```{r Figure_6, fig.cap="Figure 6. A directed acyclic graph of the relationships between the ages of maize on the MFN and the latitude, elevation, and GDD for the sites with this maize. Beta weights on each arrow indicate the size of the effect of the independent variable on the dependent. Solid lines indicate a significant effect (at p < 0.01); the dashed line indicates an effect that is not significant.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 dag_coords <-
@@ -1131,7 +1104,7 @@ dag_out <- ggdag::dagify(GDD ~ Latitude + Elevation,
                          Date ~ Latitude + Elevation,
                          coords = dag_coords) %>%
   ggdag::tidy_dagitty() %>%
-  shorten_dag_arrows(proportion = 0.27)
+  cropSpreadR::shorten_dag_arrows(proportion = 0.27)
 
 dag_out$data <-
   dplyr::left_join(
@@ -1157,7 +1130,6 @@ dag_out$data <-
   ) %>%
   dplyr::ungroup()
 
-
 dag_figure <- dag_out %>%
   ggplot(aes(
     x = x,
@@ -1168,15 +1140,31 @@ dag_figure <- dag_out %>%
   ggdag::geom_dag_point(color = "cornflowerblue",
                         alpha = 1 / 4,
                         size = 45) +
-  ggdag::geom_dag_text(color = "cornflowerblue", size = 7, fontface = "bold") +
-  ggdag::geom_dag_edges(aes(x = xstart, y = ystart, edge_linetype = edge_linetype), edge_color = "cornflowerblue", arrow_directed = grid::arrow(length = grid::unit(12, "pt"), type = "closed"), edge_width = 1.35) +
-  geom_dag_label_repel(aes(x = x_label, y = y_label, label = slope), segment.size = 0, force = 0, size = 6, label.size = NA) +
+  ggdag::geom_dag_text(color = "cornflowerblue",
+                       size = 7,
+                       fontface = "bold") +
+  ggdag::geom_dag_edges(
+    aes(
+      x = xstart,
+      y = ystart,
+      edge_linetype = edge_linetype
+    ),
+    edge_color = "cornflowerblue",
+    arrow_directed = grid::arrow(length = grid::unit(12, "pt"), type = "closed"),
+    edge_width = 1.35
+  ) +
+  ggdag::geom_dag_label_repel(
+    aes(x = x_label, y = y_label, label = slope),
+    segment.size = 0,
+    force = 0,
+    size = 6,
+    label.size = NA
+  ) +
   scale_x_continuous(NULL, breaks = NULL, expand = c(0.1, 0.1)) +
   scale_y_continuous(NULL, breaks = NULL, expand = c(0.2, 0.2)) +
   theme_bw() +
   theme(panel.grid = element_blank(),
         panel.border = element_blank())
-
 
 ggplot2::ggsave(
   filename = here::here("vignettes/figures/Figure_6.png"),
@@ -1186,44 +1174,45 @@ ggplot2::ggsave(
   dpi = 600
 )
 
-
 ```
 
 ```{r Figure_7, fig.cap="Figure 7. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
-nodes1 <-
+nodes7 <-
   maize_frontier_swus %>%
   dplyr::mutate(SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName)) %>%
   dplyr::arrange(Date) %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
   dplyr::select(id, Long, Lat, SiteName, Date) %>%
   sf::st_drop_geometry() %>%
-  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat))* 110.574) / (Date - dplyr::lag(Date)),
+  dplyr::mutate(delta = ((Lat - dplyr::lag(Lat)) * 110.574) / (Date - dplyr::lag(Date)),
                 delta = as.numeric(sprintf("%.2f", delta)))
 
 anom_point <- temp_anom %>%
   dplyr::select(year, anom) %>%
-  dplyr::mutate(anom_25 = dplyr::lag(anom, 25),
-                anom_50 = dplyr::lag(anom, 50),
-                anom_75 = dplyr::lag(anom, 75),
-                anom_100 = dplyr::lag(anom, 100),
-                anom_200 = dplyr::lag(anom, 200))
+  dplyr::mutate(
+    anom_25 = dplyr::lag(anom, 25),
+    anom_50 = dplyr::lag(anom, 50),
+    anom_75 = dplyr::lag(anom, 75),
+    anom_100 = dplyr::lag(anom, 100),
+    anom_200 = dplyr::lag(anom, 200)
+  )
 
-lags_point <- nodes1 %>%
+lags_point <- nodes7 %>%
   dplyr::filter(SiteName != "Las Capas") %>%
   dplyr::left_join(., anom_point, by = c("Date" = "year"))
 
-lm(delta ~ anom_25, data = lags_point) %>% 
-  summary()
-
-
-## Get fit, and make a variable with labels for points outside conf. interval
+# Get fit, and make a variable with labels for points outside conf. interval
 fit <- lm(delta ~ anom_25, data = lags_point)
 dat <- predict(fit, interval = "confidence")
 
 lags_point$inside <-
-  ifelse(lags_point$delta < dat[, "upr"] &
-           lags_point$delta > dat[, "lwr"], "", as.character(lags_point$SiteName))
+  ifelse(
+    lags_point$delta < dat[, "upr"] &
+      lags_point$delta > dat[, "lwr"],
+    "",
+    as.character(lags_point$SiteName)
+  )
 
 temp_spreadrate <- lags_point %>%
   ggplot2::ggplot(aes(x = anom_25, y = delta)) +
@@ -1280,14 +1269,12 @@ temp_spreadrate <- lags_point %>%
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/temp_anom_spreadrate.png"),
+  filename = here::here("vignettes/figures/Figure_7.png"),
   plot = temp_spreadrate,
   width = 15.51,
   height = 10.32,
   dpi = 600
 )
-
-
 
 ```
 
@@ -1319,7 +1306,6 @@ ckde_dates <- function(data, interval = 0.95){
   data.frame(Date = 9000:0, avg, lo, hi) %>%
     dplyr::mutate(Date = rcarbon::BPtoBCAD(Date)) %>%
     tidyr::drop_na(lo, hi)
-
 }
 
 #frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
@@ -1558,41 +1544,33 @@ download.file(
   temp
 )
 maize_frontier_swus <-
-  readr::read_rds(temp, "maize_frontier_swus.rds") %>% 
+  readr::read_rds(temp, "maize_frontier_swus.rds") %>%
   dplyr::left_join(., MDB %>% dplyr::select(LabID, Long, Lat), by = "LabID")
 unlink(temp)
 
 # Create new column for fill, which will be used for plotting. Grey if the county occurs on the maize northern frontier, and blank if it does not.
-SWUS_counties_fill <- cropSpreadR::SWUS_counties %>% 
-  dplyr::mutate(fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
-                label = ifelse(county_st %in% maize_frontier_swus$county_st, tools::toTitleCase(NAME), NA))
+SWUS_counties_fill <- cropSpreadR::SWUS_counties %>%
+  dplyr::mutate(
+    fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
+    label = ifelse(
+      county_st %in% maize_frontier_swus$county_st,
+      tools::toTitleCase(NAME),
+      NA
+    )
+  )
 
 # Plot.
 spd_counties <- ggplot(data = SWUS_counties_fill) +
-  geom_sf(
-    color = "black",
-    fill = SWUS_counties_fill$fill,
-    size = 0.25
-  ) +
-    ggrepel::geom_label_repel(
+  geom_sf(color = "black",
+          fill = SWUS_counties_fill$fill,
+          size = 0.25) +
+  ggrepel::geom_label_repel(
     aes(label = label, geometry = geom),
     stat = "sf_coordinates",
     min.segment.length = 0.1,
     size = 7
   ) +
-  #   geom_label_repel(
-  #   aes(y = PrDens, x = MedianBP, label = SiteNameID),
-  #   color = "red",
-  #   cex = 5,
-  #   show.legend  = F,
-  #   min.segment.length = unit(0.1, 'lines'),
-  #   box.padding = 1,
-  #   nudge_x = -550,
-  #   nudge_y = 0.35,
-  #   fill = alpha(c("white"), 0.6),
-  #   label.size = NA
-  # ) +
-  coord_sf() +
+coord_sf() +
   theme_bw() +
   theme(
     legend.position = c(.15, .2),
@@ -1610,7 +1588,7 @@ spd_counties <- ggplot(data = SWUS_counties_fill) +
       face = "bold"
     )
   )
-  
+
 ggplot2::ggsave(
   filename = here::here("vignettes/figures/Figure_9.png"),
   plot = spd_counties,
@@ -1624,9 +1602,192 @@ ggplot2::ggsave(
 
 # Supplemental Figures
 
+```{r Figure_S1, fig.cap="Figure S1. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
+nodes1 <-
+  maize_frontier_swus %>%
+  dplyr::mutate(
+    SiteName = ifelse(SiteName == "Elsinore Burial", SiteID, SiteName),
+    SiteName = ifelse(SiteName == "Guila Naquitz", "Guilá Naquitz", SiteName)
+  ) %>%
+  dplyr::mutate(
+    grp = dplyr::case_when(
+      SiteName == "Las Capas" ~ 1,
+      SiteName == "Old Corn" ~ 1,
+      SiteName == "Three Fir Shelter" ~ 1,
+      SiteName == "Eagles Watch" ~ 2,
+      SiteName == "42SV2111" ~ 2,
+      SiteName == "Hot Spring Lake Site" ~ 2,
+      SiteName == "Willard Mounds" ~ 2,
+      SiteName == "Six Toe Shelter" ~ 3,
+      SiteName == "Cottonwood Cave" ~ 3,
+      SiteName == "Eagle Rock Shelter" ~ 3,
+      SiteName == "Juniper Ledge Shelter" ~ 3,
+      SiteName == "Sonders Basket" ~ 3,
+      SiteName == "Finch Draw Shelter" ~ 3
+    )
+  ) %>%
+  dplyr::bind_rows(
+    .,
+    maize_frontier_swus %>% dplyr::filter(SiteName == "Three Fir Shelter") %>% dplyr::mutate(grp = 2),
+    maize_frontier_swus %>% dplyr::filter(SiteName == "Three Fir Shelter") %>% dplyr::mutate(grp = 3)
+  ) %>%
+  dplyr::arrange(grp, Date) %>%
+  dplyr::select(grp, Long, Lat, SiteName, Date) %>%
+  dplyr::group_by(grp) %>%
+  dplyr::mutate(
+    lead_row = geometry[dplyr::row_number() + 1],
+    dist_deg = as.numeric(dplyr::lag(
+      sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
+    )),
+    dist_km = dist_deg * 110.574,
+    delta_deg = dist_deg / (Date - dplyr::lag(Date)),
+    delta_km = dist_km / (Date - dplyr::lag(Date)),
+    delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)),
+    delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)),
+    delta_lat_km = delta_lat_deg * 110.574
+  ) %>%
+  dplyr::select(-lead_row) %>%
+  sf::st_drop_geometry() %>%
+  dplyr::arrange(grp, Date) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(id = dplyr::row_number())
 
-```{r Figure_S2, fig.cap="Figure S2. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+maize_spread_table <- nodes1 %>%
+  dplyr::select(-c(id, Long, Lat))
+
+names(maize_spread_table) <-
+  c(
+    "Group",
+    "Site Name",
+    "Date",
+    "Euclidean Distance (Degrees)",
+    "Euclidean Distance (km)",
+    "\u0394 Degrees Euclidean Distance/Year",
+    "\u0394 km Euclidean Distance/Year",
+    "\u0394 Degrees North/Year",
+    "\u0394 km North/Year"
+  )
+
+#readr::write_excel_csv(maize_spread_table, here::here("vignettes/tables/Table_1_splitRoute.csv"))
+
+names(nodes1) <-
+  c(
+    "grp",
+    "lon",
+    "lat",
+    "name",
+    "date",
+    "dist_deg",
+    "dist_km",
+    "delta_deg",
+    "delta_km",
+    "delta_lat_deg",
+    "delta_lat_km",
+    "id"
+  )
+
+nodes1 <- nodes1 %>%
+  dplyr::arrange(id) %>%
+  dplyr::select(id, everything())
+
+edges1 <- data.frame(
+  from = c(1:2, 4:7, 9:14),
+  to = c(2:3, 5:8, 10:15),
+  color = nodes1$delta_km[!is.na(nodes1$delta_km)]
+)
+
+nodes_dups <- nodes1 %>%
+  dplyr::filter(!dplyr::row_number() %in% c(4, 9))
+
+edges_for_plot1 <- edges1 %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
+  dplyr::rename(x = lon, y = lat) %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
+  dplyr::rename(xend = lon, yend = lat)
+
+assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+country_shapes1 <-
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('state'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+mapcoords1 <-
+  ggplot2::coord_fixed(xlim = c(-114.814521, -105),
+                       ylim = c(31.333254, 42))
+
+legend.breaks = 3
+
+fig_s1 <-
+ggplot(nodes1) +
+  country_shapes1 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      color = color
+    ),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 1.0,
+    size = 1.0
+  ) +
+  scale_color_distiller(palette = "RdYlGn",
+                        direction = 1,
+                        name = "\u0394 km ED/year") +
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  ggrepel::geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 2.75,
+    color = "black",
+    min.segment.length = 0.15,
+    fill = alpha(c("white"), 0.7),
+    force = 34,
+    nudge_x = -0.51,
+    nudge_y = 0.15,
+    family = "Helvetica"
+  ) +
+  mapcoords1 +
+  theme_void() +
+  theme(
+    plot.margin = grid::unit(c(2, 2, 2, 2), "mm"),
+    legend.box.spacing = unit(20.0, "pt"),
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 14, family = "Helvetica"),
+    legend.title = element_text(
+      size = 18,
+      face = "bold",
+      family = "Helvetica"
+    )
+  )
+
+ggplot2::ggsave(
+  fig_s1,
+  filename = here::here("vignettes/figures/supplemental/Figure_S1.png"),
+  width = 13.7,
+  height = 10.2,
+  dpi = 900
+)
+
+```
+
+```{r Figure_S3, fig.cap="Figure S3. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 MDB3A <- MDB %>%
   dplyr::filter(Country == "USA") %>%
@@ -1776,13 +1937,13 @@ spd_plot <-
 
 spd_plot
 
-# ggplot2::ggsave(
-#   filename = here::here("vignettes/figures/Figure_7.png"),
-#   plot = spd_plot,
-#   width = 16,
-#   height = 18,
-#   dpi = 600
-# )
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_S3.png"),
+  plot = spd_plot,
+  width = 16,
+  height = 18,
+  dpi = 600
+)
 
 
 # Histogram, which gives the counts for the number of samples at each site in each county.
@@ -1801,7 +1962,6 @@ cropSpreadR::sw_rc %>%
   facet_wrap(. ~ county_st, ncol = 3)
 
 ```
-
 
 
 ```{r multi_regression}
