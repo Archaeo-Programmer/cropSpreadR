@@ -1350,7 +1350,8 @@ ckde_test2 <- ckde_test1 %>%
   dplyr::filter(SiteIDName %in% sites_to_subsample) %>%
   dplyr::group_by(SiteIDName) %>%
   dplyr::slice_sample(prop = 0.2, replace = TRUE) %>%
-  dplyr::bind_rows(ckde_test1 %>% dplyr::filter(!SiteIDName %in% sites_to_subsample),
+  dplyr::bind_rows(ckde_test1 %>% 
+                     dplyr::filter(!SiteIDName %in% sites_to_subsample),
                    .,
   ) %>%
   dplyr::select(-SiteIDName) %>%
@@ -1369,13 +1370,6 @@ ckde_test2 <- ckde_test1 %>%
   )) %>%
   dplyr::select(-data) %>%
   tidyr::unnest(ckde)
-
-county_order <- cropSpreadR::SWUS_counties %>%
-  sf::st_drop_geometry() %>%
-  dplyr::select(county_st, centroid_lat) %>%
-  dplyr::arrange(desc(centroid_lat)) %>%
-  dplyr::filter(county_st %in% frontier_counties) %>%
-  dplyr::pull(county_st)
 
 maize_oldest <- maize_frontier_swus %>% 
   sf::st_drop_geometry() %>%
