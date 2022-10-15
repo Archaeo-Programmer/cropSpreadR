@@ -1280,31 +1280,6 @@ ggplot2::ggsave(
 
 sw_rc <- cropSpreadR::sw_rc
 
-ckde_dates <- function(data, interval = 0.95){
-  cptcal <- rcarbon::calibrate(x = data$Age,
-                               errors = data$Error,
-                               calCurves = data$calib,
-                               verbose = FALSE)
-  sampledDates <- rcarbon::sampleDates(cptcal, nsim = 1000, boot = TRUE)
-  sw_ckde <- rcarbon::ckde(sampledDates, timeRange = c(9000,0),bw = 50)
-
-  avg = apply(sw_ckde$res.matrix, 1, mean, na.rm = TRUE)
-  lo = apply(sw_ckde$res.matrix,
-             1,
-             quantile,
-             prob = (1 - interval) / 2,
-             na.rm = TRUE)
-  hi = apply(sw_ckde$res.matrix,
-             1,
-             quantile,
-             prob = interval + (1 - interval) / 2,
-             na.rm = TRUE)
-
-  data.frame(Date = 9000:0, avg, lo, hi) %>%
-    dplyr::mutate(Date = rcarbon::BPtoBCAD(Date)) %>%
-    tidyr::drop_na(lo, hi)
-}
-
 #frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
 frontier_counties <- c("sevier, utah", "daggett, utah", "catron, new mexico",
                        "navajo, arizona", "salt lake, utah", "pima, arizona",
@@ -1375,13 +1350,23 @@ ckde_test2 <- ckde_test1 %>%
   dplyr::filter(SiteIDName %in% sites_to_subsample) %>%
   dplyr::group_by(SiteIDName) %>%
   dplyr::slice_sample(prop = 0.2, replace = TRUE) %>%
-  dplyr::bind_rows(ckde_test1 %>% dplyr::filter(!SiteIDName %in% sites_to_subsample), ., ) %>%
+  dplyr::bind_rows(ckde_test1 %>% dplyr::filter(!SiteIDName %in% sites_to_subsample),
+                   .,
+  ) %>%
   dplyr::select(-SiteIDName) %>%
   dplyr::group_by(county_st) %>%
   dplyr::mutate(n = dplyr::n()) %>%
   dplyr::group_by(n, .add = TRUE) %>%
   tidyr::nest() %>%
-  dplyr::mutate(ckde = purrr::map(data, ckde_dates)) %>%
+  dplyr::mutate(ckde = purrr::map(
+    data,
+    ~ cropSpreadR::calc_ckde_dates(
+      .x,
+      interval = 0.95,
+      timeRange_max = 9000,
+      timeRange_min = 0
+    )
+  )) %>%
   dplyr::select(-data) %>%
   tidyr::unnest(ckde)
 
