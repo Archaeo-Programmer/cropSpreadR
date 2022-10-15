@@ -28,7 +28,7 @@ library(cropDiffusionR)
 
 ```{r load_data, include = FALSE, results = 'hide', echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide'} 
 
-# Load the temperature anomaly reconstruction from paleoMAT.
+# Load the temperature anomaly reconstruction from paleoMAT package.
 temp_anom <-
   readr::read_csv(
     "https://raw.githubusercontent.com/Archaeo-Programmer/paleoMAT/master/vignettes/tables/supp_table_s2.csv",
@@ -132,8 +132,6 @@ maize_frontier_mexico <- MDB_env %>%
                 centroid_lat = ifelse(is.na(centroid_lat), Lat, centroid_lat))
 
 ```
-
-
 
 ```{r  Figure_1, fig.cap="Figure 1. Frequency distribution of directly dated maize macrofossils in our maize database for sites that are north of 30° latitude and older than AD 1500 (n = 985), distinguishing between the earliest maize sample at each site (n = 275), and all other maize samples fitting the criteria above (n = 710). Two of the earliest maize sites, Las Capas and Old Corn, are individually labeled.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}}
 
@@ -1278,7 +1276,6 @@ ggplot2::ggsave(
 
 ```
 
-
 ```{r Figure_8, fig.cap="Figure 8. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
@@ -1395,38 +1392,18 @@ county_order <- cropSpreadR::SWUS_counties %>%
   dplyr::filter(county_st %in% frontier_counties) %>%
   dplyr::pull(county_st)
 
-maize_oldest <- cropSpreadR::sw_rc %>%
-  dplyr::filter(stringr::str_detect(Taxa, "zea|Zea")) %>%
-  dplyr::filter(LabID != "Beta-122953") %>%
-  dplyr::filter(county_st %in% maize_frontier_swus$county_st)
-
-maize_oldest2 <-
-  rcarbon::calibrate(
-    x = maize_oldest$Age,
-    errors = maize_oldest$Error,
-    calCurves = maize_oldest$calib,
-    verbose = FALSE
-  ) %>%
-  summary() %>%
-  dplyr::bind_cols(maize_oldest, .) %>%
-  dplyr::select(county_st, MedianBP, LabID, SiteID, SiteName) %>%
-  dplyr::group_by(county_st) %>%
-  dplyr::slice_max(MedianBP, with_ties = FALSE) %>%
-  dplyr::left_join(.,
-                   MDB %>% dplyr::select(LabID, SiteID, SiteName, SiteIDName),
-                   by = "LabID") %>%
-  dplyr::mutate(
-    SiteID = dplyr::coalesce(SiteID.y, SiteID.x),
-    SiteName = dplyr::coalesce(SiteName.y, SiteName.x),
-    .keep = "unused"
-  ) %>%
-  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>%
-  dplyr::mutate(Date = rcarbon::BPtoBCAD(MedianBP)) %>%
-  dplyr::select(county_st, Date, SiteNameID) %>%
-  dplyr::mutate(date_maize = Date)
+maize_oldest <- maize_frontier_swus %>% 
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>% 
+  dplyr::select(county_st, SiteNameID, Date) %>% 
+  dplyr::mutate(date_maize = Date) %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::slice_min(Date) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::arrange(Date)
 
 ckde_test3 <- ckde_test2 %>%
-  dplyr::left_join(., maize_oldest2, by = c("county_st", "Date")) %>%
+  dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
   dplyr::mutate(county_st2 = county_st,
                 county_st = tools::toTitleCase(county_st),
                 county_st = paste0(county_st, " (n = ", n, ")")) %>%
@@ -1794,33 +1771,16 @@ MDB3A <- MDB %>%
   dplyr::select(LabID, Long, Lat, SiteIDName, MedianBP) %>%
   dplyr::mutate(SiteIDName = ifelse(SiteIDName == "Willard Mounds", "42BO3", SiteIDName))
 
-maize_oldest <- cropSpreadR::sw_rc %>%
-  dplyr::filter(stringr::str_detect(Taxa, "zea|Zea")) %>%
-  dplyr::filter(LabID != "Beta-122953") %>%
-  dplyr::filter(county_st %in% maize_frontier_swus$county_st)
-
-maize_oldest2 <-
-  rcarbon::calibrate(
-    x = maize_oldest$Age,
-    errors = maize_oldest$Error,
-    calCurves = maize_oldest$calib,
-    verbose = FALSE
-  ) %>%
-  summary() %>%
-  dplyr::bind_cols(maize_oldest, .) %>%
-  dplyr::select(county_st, MedianBP, LabID, SiteID, SiteName) %>%
-  dplyr::group_by(county_st) %>%
-  dplyr::slice_max(MedianBP, with_ties = FALSE) %>%
-  dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
-  dplyr::left_join(.,
-                   MDB %>% dplyr::select(LabID, SiteID, SiteName, SiteIDName),
-                   by = "LabID") %>%
-  dplyr::mutate(
-    SiteID = dplyr::coalesce(SiteID.y, SiteID.x),
-    SiteName = dplyr::coalesce(SiteName.y, SiteName.x),
-    .keep = "unused"
-  ) %>%
-  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID))
+maize_oldest <- maize_frontier_swus %>% 
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>% 
+  dplyr::select(LabID, county_st, SiteNameID, Date, MedianBP) %>% 
+  dplyr::mutate(date_maize = Date) %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::slice_min(Date) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::mutate(county_st = tools::toTitleCase(county_st))
 
 county_centroid <- cropSpreadR::SWUS_counties %>%
   sf::st_drop_geometry() %>%
@@ -1830,7 +1790,7 @@ county_centroid <- cropSpreadR::SWUS_counties %>%
 by_county_changes <- cropSpreadR::SPD_county %>%
   dplyr::filter(county_st %in% maize_frontier_swus$county_st) %>%
   dplyr::mutate(county_st = tools::toTitleCase(county_st)) %>%
-  dplyr::left_join(maize_oldest2, ., by = "county_st") %>%
+  dplyr::left_join(maize_oldest, ., by = "county_st") %>%
   dplyr::left_join(
     .,
     cropSpreadR::SWUS_counties %>%
@@ -1875,7 +1835,6 @@ spd_plot <-
     label.size = NA
   ) +
   theme_bw() +
-  #scale_x_reverse(breaks = seq(0, 6000, 1000), limits = c(6000, 0)) +
   scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
   scale_y_continuous(
     breaks = function(x)
@@ -1897,7 +1856,6 @@ spd_plot <-
       face = "bold"
     ),
     axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -1938,7 +1896,7 @@ spd_plot <-
 spd_plot
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_S3.png"),
+  filename = here::here("vignettes/figures/supplemental/Figure_S3.png"),
   plot = spd_plot,
   width = 16,
   height = 18,
