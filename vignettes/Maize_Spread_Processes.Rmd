@@ -2028,71 +2028,7 @@ cropSpreadR::sw_rc %>%
 
 ```
 
-
-```{r multi_regression}
-
-mlr <- MDB_env %>%
-  dplyr::group_by(SiteIDName) %>%
-  dplyr::slice_min(Date) %>%
-  dplyr::filter(Lat >= 30 & Date < 1500) %>%
-  dplyr::mutate(bin = cut(Date,
-                          breaks = seq(-3700, 1500, 100))) %>%
-  dplyr::group_by(bin) %>%
-  dplyr::mutate(group = dplyr::cur_group_id()) %>%
-  dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>%
-  dplyr::ungroup()
-
-mlr2 <- mlr %>%
-  dplyr::select(Date, Lat, elevation, GDD) %>% 
-  dplyr::mutate(dplyr::across(everything(), scales::rescale))
-
-gdd_lat <- lm(GDD ~ Lat, data = mlr2)
-gdd_elev <- lm(GDD ~ elevation, data = mlr2)
-date_lat <- lm(Date ~ Lat, data = mlr2)
-date_elev <- lm(Date ~ elevation, data = mlr2)
-date_gdd <- lm(Date ~ GDD, data = mlr2)
-
-stats_table <-
-  purrr::map_dfr(list(gdd_lat, gdd_elev, date_lat, date_elev, date_gdd), function(x) {
-    x %>%
-      summary() %>%
-      {
-        data.frame(
-          formula = as.character(.$call)[[2]],
-          slope = formatC(.$coefficients[2, 1], digits = 3, format = "f"),
-          r2 = formatC(.$r.squared, digits = 2, format = "f"),
-          pvalue = formatC(.$coefficients[2, 4],
-                           digits = 3,
-                           format = "f"),
-          Fstatistic = formatC(.$fstatistic[[1]],
-                               digits = 2,
-                               format = "f")
-        )
-      } })
-
-
-
-fit <- lm(Date ~ Lat + GDD + elevation, data = mlr)
-summary(fit)
-
-fit <- lm(Date ~ GDD * Lat + elevation * GDD, data = mlr)
-summary(fit)
-
-summary(lm(Date ~ (Lat + GDD + elevation)^2, data = mlr))
-summary(lm(Date ~ Lat * GDD + elevation * GDD, data = mlr))
-
-anova_table <- anova(fit)
-effectsize(anova_table)
-effectsize(anova_table, type = "f2")
-
-#produce added variable plots
-car::avPlots(fit)
-
-car::leveragePlots(fit)
-
-```
-
-```{r Figure_8, fig.cap="Figure 8. The MNF sites (red points) relative to the composite kernel density estimates (CKDE) for the counties in the four-state southwestern United States, which contain the MNF sites (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Sample sizes for the CKDEs shown in parentheses. Note variability in scales on y axis. We do not include Delta County, Colorado as the sample size was small and dominated by samples from Eagle Rock Shelter (5DT813, containing 51 of the 67 samples in the county).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_S4, fig.cap="Figure S4. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -2273,10 +2209,9 @@ perm_spd_plot <-
       l = 5
     )
   )
- 
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_8.png"),
+  filename = here::here("vignettes/figures/supplemental/Figure_S4.png"),
   plot = perm_spd_plot,
   width = 16,
   height = 18,
@@ -2284,10 +2219,6 @@ ggplot2::ggsave(
 )
 
 ```
-
-
-
-
 
 
 
