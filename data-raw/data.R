@@ -403,3 +403,27 @@ SPD_county <- by_county %>%
 
 usethis::use_data(SPD_county,
                   overwrite = TRUE)
+
+
+# Get a shapefile for the Balsas Basin.
+download.file(
+  url = "https://birdscanada.org/download/gislab/bcr_terrestrial_shape.zip?_ga=2.159175994.1630070136.1666017185-75333408.1666017185",
+  destfile = here::here("data-raw/BCR_Terrestrial.zip"))
+
+unzip(zipfile = here::here("data-raw/BCR_Terrestrial.zip"),
+      exdir = here::here("data-raw"))
+
+# Remove the zip file.
+file.remove(here::here("data-raw/BCR_Terrestrial.zip"))
+# Remove other unnecessary files.
+file.remove(list.files(here::here("data-raw/BCR_Terrestrial"), pattern = "BCR_Terrestrial_dissolve|BCR_Terrestrial_master_International", full.names = TRUE))
+
+# Read in shapefile.
+Balsas_Basin <- sf::read_sf(here::here("data-raw/BCR_Terrestrial/BCR_Terrestrial_master.shp")) %>%
+  dplyr::filter(BCRNAME == "CUENCA DEL RIO BALSAS")
+
+usethis::use_data(Balsas_Basin,
+                  overwrite = TRUE)
+
+
+

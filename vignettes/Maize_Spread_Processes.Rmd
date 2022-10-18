@@ -973,8 +973,8 @@ MDB_env2 <- MDB_env %>%
   dplyr::slice_min(Date, with_ties = FALSE) %>%
   dplyr::group_by(gr = cut(
     Date,
-    breaks = seq(-4000, 1500, 500),
-    labels = seq(-3750, 1250, 500)
+    breaks = seq(-4000, 1500, 100),
+    labels = seq(-3950, 1450, 100)
   )) %>%
   dplyr::mutate(date2 = as.numeric(as.character(gr))) %>%
   dplyr::ungroup() %>%
@@ -1010,6 +1010,7 @@ env_summaries_bp <-
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 12),
     axis.ticks.length = unit(0.125, "inch"),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
     axis.text = element_text(
       size = 26,
       colour = "black",
@@ -1276,7 +1277,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_8, fig.cap="Figure 8. The MNF relative to the SPDs for the counties in the four-state southwestern United States that are on the MNF through time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_8, fig.cap="Figure 8. The MNF sites (red points) relative to the composite kernel density estimates (CKDE) for the counties in the four-state southwestern United States, which contain the MNF sites (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Sample sizes for the CKDEs shown in parentheses. Note variability in scales on y axis. We do not include Delta County, Colorado as the sample size was small and dominated by samples from Eagle Rock Shelter (5DT813, containing 51 of the 67 samples in the county).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -1489,6 +1490,83 @@ ggplot2::ggsave(
   dpi = 600
 )
 
+
+DK.caldates = calibrate(x = pima$Age,
+                        errors = pima$Error,
+                        calCurves = 'intcal20')
+
+DK.bins = binPrep(sites = pima$SiteIDName,
+                  ages = pima$Age,
+                  h = 100)
+
+DK.randates = sampleDates(DK.caldates,
+                          #bins = DK.bins,
+                          nsim = 100,
+                          verbose = FALSE)
+
+D.ckde = ckde(DK.randates, timeRange = c(6000, 1500), bw = 200)
+
+nsim = 100
+
+expnull <-
+  modelTest(
+    DK.caldates,
+    errors = pima$Error,
+    #bins = DK.bins,
+    nsim = nsim,
+    timeRange = c(6000, 1500),
+    model = "exponential",
+    runm = 100
+  )
+
+section_area_data <- bind_rows(perm.emedyd[["observed"]], .id = "county_st")
+
+sw_rc_subset <- sw_rc %>% 
+  dplyr::filter(county_st %in% frontier_counties)
+  
+cal.emedyd = calibrate(x = sw_rc_subset$Age,
+                        errors = sw_rc_subset$Error, normalised = FALSE)
+
+perm.emedyd = permTest(
+  x = cal.emedyd,
+  marks = sw_rc_subset$county_st,
+  timeRange = c(7000, 500),
+  nsim = nsim,
+  runm = 50
+)
+
+
+perm_spd_output <- dplyr::bind_cols(dplyr::bind_rows(perm.emedyd[["observed"]], .id = "county_st"), 
+                                    dplyr::bind_rows(lapply(perm.emedyd[["envelope"]], as.data.frame)))
+
+pvalues <- data.frame(pvalue = perm.emedyd[["pValueList"]]) %>%
+  tibble::rownames_to_column("county_st")
+
+
+summary(perm.emedyd)
+
+par(mfrow = c(4, 3))
+plot(perm.emedyd, focalm = 1, main = "pima, arizona")
+plot(perm.emedyd, focalm = 2, main = "navajo, arizona")
+plot(perm.emedyd, focalm = 3, main = "montrose, colorado")
+plot(perm.emedyd, focalm = 4, main = "catron, new mexico")
+plot(perm.emedyd, focalm = 5, main = "kane, utah")
+plot(perm.emedyd, focalm = 6, main = "san juan, utah")
+plot(perm.emedyd, focalm = 7, main = "box elder, utah")
+plot(perm.emedyd, focalm = 8, main = "sevier, utah")
+plot(perm.emedyd, focalm = 9, main = "salt lake, utah")
+plot(perm.emedyd, focalm = 10, main = "uintah, utah")
+plot(perm.emedyd, focalm = 11, main = "daggett, utah")
+
+
+emedyd.spd = stackspd(
+  x = cal.emedyd,
+  group = sw_rc_subset$county_st,
+  timeRange = c(7000, 500),
+  runm = 50,
+  verbos = FALSE
+)
+
 ```
 
 ```{r Figure_9, fig.cap="Figure 9. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
@@ -1555,6 +1633,56 @@ ggplot2::ggsave(
 
 ```
 
+```{r estimating_maize_departure}
+
+maize_spread_rates <- readr::read_csv(here::here("vignettes/tables/Table_1.csv"), show_col_types = FALSE) %>% 
+  dplyr::select(`Lab ID`:Elevation, delta_kmN = `Δ km North/Year`)
+
+max_SW_spread <- maize_spread_rates %>% 
+  dplyr::filter(Country != "Mexico" & `Site Name` != "Las Capas") %>% 
+  dplyr::slice_max(delta_kmN)
+
+max_spread <- max_SW_spread %>% 
+  dplyr::slice(2) %>% 
+  dplyr::pull(delta_kmN)
+
+LC_ST_rate <- maize_frontier_swus %>% 
+  dplyr::filter(SiteName %in% c("Las Capas", "Six Toe Shelter")) %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::mutate(delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)), 
+                delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)), 
+                delta_lat_km = delta_lat_deg * 110.574) %>% 
+  dplyr::filter(!is.na(delta_lat_km)) %>% 
+  dplyr::pull(delta_lat_km)
+
+LC_WM_rate <- maize_frontier_swus %>% 
+  dplyr::filter(SiteName %in% c("Las Capas", "Willard Mounds")) %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::mutate(delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)), 
+                delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)), 
+                delta_lat_km = delta_lat_deg * 110.574) %>% 
+  dplyr::filter(!is.na(delta_lat_km)) %>% 
+  dplyr::pull(delta_lat_km)
+
+balsas_dissolve <- cropSpreadR::Balsas_Basin %>% 
+  dplyr::summarize()
+
+balsas_centroid <- balsas_dissolve %>% 
+  sf::st_centroid() %>% 
+  sf::st_coordinates()
+
+dist <- (maize_frontier_swus %>% 
+  dplyr::filter(SiteName == "Las Capas") %>% 
+  dplyr::pull(Lat) - balsas_centroid[1,2]) * 110.574
+  
+out <- data.frame(type = c("max_swus", "LC_ST", "LC_WM"),
+                  rate = c(max_spread, LC_ST_rate, LC_WM_rate)) %>% 
+  dplyr::mutate(time = dist / rate)
+
+
+
+
+```
 
 # Supplemental Figures
 
@@ -1964,7 +2092,254 @@ car::leveragePlots(fit)
 
 ```
 
+```{r Figure_8, fig.cap="Figure 8. The MNF sites (red points) relative to the composite kernel density estimates (CKDE) for the counties in the four-state southwestern United States, which contain the MNF sites (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Sample sizes for the CKDEs shown in parentheses. Note variability in scales on y axis. We do not include Delta County, Colorado as the sample size was small and dominated by samples from Eagle Rock Shelter (5DT813, containing 51 of the 67 samples in the county).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
+sw_rc <- cropSpreadR::sw_rc
+
+#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
+frontier_counties <- c("sevier, utah", "daggett, utah", "catron, new mexico",
+                       "navajo, arizona", "salt lake, utah", "pima, arizona",
+                       "kane, utah", "montrose, colorado", "uintah, utah", "box elder, utah",
+                       "san juan, utah")
+
+sw_rc_subset <- sw_rc %>% 
+  dplyr::filter(county_st %in% frontier_counties)
+  
+cal.emedyd = calibrate(x = sw_rc_subset$Age,
+                        errors = sw_rc_subset$Error, normalised = FALSE)
+
+perm.emedyd = permTest(
+  x = cal.emedyd,
+  marks = sw_rc_subset$county_st,
+  timeRange = c(7000, 500),
+  nsim = nsim,
+  runm = 50
+) 
+
+pvalues <- data.frame(pvalue = perm.emedyd[["pValueList"]]) %>%
+  tibble::rownames_to_column("county_st")
+
+sample_size <- dplyr::bind_rows(perm.emedyd[["metadata"]]) %>% 
+  tidyr::pivot_longer(everything(), names_to = "county_st", values_to = "n") %>% 
+  dplyr::distinct()
+
+perm_spd_output <- dplyr::bind_cols(dplyr::bind_rows(perm.emedyd[["observed"]], .id = "county_st"), 
+                                    dplyr::bind_rows(lapply(perm.emedyd[["envelope"]], as.data.frame))) %>% 
+  dplyr::rename(lo = V1, hi = V2) %>% 
+  dplyr::mutate(Date = rcarbon::BPtoBCAD(calBP)) %>% 
+  tibble::tibble() %>% 
+  dplyr::left_join(., pvalues, by = "county_st") %>% 
+  dplyr::left_join(., sample_size, by = "county_st") %>% 
+  dplyr::mutate(pvalue = ifelse(pvalue < 0.01, paste0("p < 0.01"), paste0("p = ", sprintf("%.2f", pvalue))),
+                boom_bust = dplyr::case_when(PrDens < hi & PrDens > lo ~ "medium", 
+                                             PrDens > hi ~ "indianred",
+                                             PrDens < lo ~ "royalblue",
+                                             TRUE ~ "medium"))
+
+maize_oldest <- maize_frontier_swus %>% 
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>% 
+  dplyr::select(county_st, SiteNameID, Date) %>% 
+  dplyr::mutate(date_maize = Date) %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::slice_min(Date) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::arrange(Date) %>% 
+  dplyr::filter(county_st %in% frontier_counties)
+
+ckde_test3 <- perm_spd_output %>%
+  dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
+  dplyr::mutate(county_st2 = county_st,
+                county_st = tools::toTitleCase(county_st),
+                county_st = paste0(county_st, " (n = ", n, "; ",  pvalue, ")")) %>%
+  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
+
+county_order <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st2 = county_st, centroid_lat) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  dplyr::filter(county_st2 %in% frontier_counties) %>%
+  dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = "county_st2") %>%
+  dplyr::pull(county_st)
+
+condensed <- perm_spd_output %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::mutate(change = cumsum(boom_bust != lag(boom_bust, def = first(boom_bust)))) %>% 
+  dplyr::group_by(change, .add = TRUE) %>% 
+  dplyr::filter(dplyr::row_number() %in% c(1, n()) & boom_bust != "medium") %>% 
+  dplyr::group_by(grp = str_c('Column', rep(1:2, length.out = n()))) %>%
+  dplyr::mutate(rn = row_number()) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(county_st, Date, boom_bust, grp, rn) %>% 
+  tidyr::pivot_wider(names_from = grp, values_from = Date) %>% 
+  dplyr::select(-rn, xmin = Column1, xmax = Column2, fill = boom_bust) %>% 
+  dplyr::mutate(ymin = -Inf, ymax = Inf) %>% 
+  dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = c("county_st" = "county_st2")) %>% 
+  dplyr::select(-county_st, county_st = county_st.y) %>% 
+  dplyr::mutate(county_st = factor(county_st, levels = county_order))
+
+perm_spd_plot <-
+  ggplot(data = ckde_test3, aes(y = PrDens, x = Date)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi),
+              alpha = 0.4,
+              fill = "grey70") +
+  geom_rect(
+    aes(
+      xmin = xmin,
+      xmax = xmax,
+      ymin = ymin,
+      ymax = ymax,
+      fill = I(fill)
+    ),
+    alpha = 0.4,
+    inherit.aes = FALSE,
+    data = condensed
+  ) +
+  geom_line() +
+  geom_point(
+    aes(y = PrDens, x = date_maize),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  ggrepel::geom_label_repel(
+    aes(y = PrDens, x = date_maize, label = SiteNameID),
+    color = "red",
+    cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size = NA
+  ) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.2f", y)
+  ) +
+  facet_wrap( ~ factor(county_st, levels = county_order),
+              scales = "free_y",
+              ncol = 1) +
+  xlab("Years BC/AD") +
+  ylab("Summed Probability") +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+ 
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_8.png"),
+  plot = perm_spd_plot,
+  width = 16,
+  height = 18,
+  dpi = 600
+)
+
+
+DK.caldates = calibrate(x = pima$Age,
+                        errors = pima$Error,
+                        calCurves = 'intcal20')
+
+DK.bins = binPrep(sites = pima$SiteIDName,
+                  ages = pima$Age,
+                  h = 100)
+
+DK.randates = sampleDates(DK.caldates,
+                          #bins = DK.bins,
+                          nsim = 100,
+                          verbose = FALSE)
+
+D.ckde = ckde(DK.randates, timeRange = c(6000, 1500), bw = 200)
+
+nsim = 100
+
+expnull <-
+  modelTest(
+    DK.caldates,
+    errors = pima$Error,
+    #bins = DK.bins,
+    nsim = nsim,
+    timeRange = c(6000, 1500),
+    model = "exponential",
+    runm = 100
+  )
+
+section_area_data <- bind_rows(perm.emedyd[["observed"]], .id = "county_st")
+
+
+summary(perm.emedyd)
+
+par(mfrow = c(4, 3))
+plot(perm.emedyd, focalm = 1, main = "pima, arizona")
+plot(perm.emedyd, focalm = 2, main = "navajo, arizona")
+plot(perm.emedyd, focalm = 3, main = "montrose, colorado")
+plot(perm.emedyd, focalm = 4, main = "catron, new mexico")
+plot(perm.emedyd, focalm = 5, main = "kane, utah")
+plot(perm.emedyd, focalm = 6, main = "san juan, utah")
+plot(perm.emedyd, focalm = 7, main = "box elder, utah")
+plot(perm.emedyd, focalm = 8, main = "sevier, utah")
+plot(perm.emedyd, focalm = 9, main = "salt lake, utah")
+plot(perm.emedyd, focalm = 10, main = "uintah, utah")
+plot(perm.emedyd, focalm = 11, main = "daggett, utah")
+
+
+emedyd.spd = stackspd(
+  x = cal.emedyd,
+  group = sw_rc_subset$county_st,
+  timeRange = c(7000, 500),
+  runm = 50,
+  verbos = FALSE
+)
+
+```
 
 
 
