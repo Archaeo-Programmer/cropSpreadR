@@ -1279,6 +1279,31 @@ ggplot2::ggsave(
 
 ```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
+sw_rc <- cropSpreadR::sw_rc
+
+#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
+frontier_counties <-
+  c(
+    "sevier, utah",
+    "delta, colorado",
+    "daggett, utah",
+    "catron, new mexico",
+    "navajo, arizona",
+    "salt lake, utah",
+    "pima, arizona",
+    "kane, utah",
+    "montrose, colorado",
+    "uintah, utah",
+    "box elder, utah",
+    "san juan, utah"
+  )
+
+sw_rc_subset <- sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties) %>% 
+  dplyr::group_by(county_st) %>% 
+  dplyr::summarise(no_samples = dplyr::n(),
+                   no_sites = length(unique(SiteIDName)))
+
 # Get sites that are on the northern maize frontier through time from cropDiffusionR package.
 temp <- tempfile()
 download.file(
@@ -1292,8 +1317,9 @@ unlink(temp)
 
 # Create new column for fill, which will be used for plotting. Grey if the county occurs on the maize northern frontier, and blank if it does not.
 SWUS_counties_fill <- cropSpreadR::SWUS_counties %>%
+  dplyr::left_join(., sw_rc_subset, by = "county_st") %>% 
   dplyr::mutate(
-    fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
+    #fill = ifelse(county_st %in% maize_frontier_swus$county_st, "grey", NA),
     label = ifelse(
       county_st %in% maize_frontier_swus$county_st,
       tools::toTitleCase(NAME),
@@ -1302,20 +1328,26 @@ SWUS_counties_fill <- cropSpreadR::SWUS_counties %>%
   )
 
 # Plot.
-spd_counties <- ggplot(data = SWUS_counties_fill) +
+spd_counties_samples <- ggplot(data = SWUS_counties_fill) +
   geom_sf(color = "black",
-          fill = SWUS_counties_fill$fill,
-          size = 0.25) +
+          aes(fill = no_samples),
+          size = 0.25,
+          na.rm = TRUE
+          ) +
+  scale_fill_continuous(low="#FFC20A", high="#0C7BDC",
+                       guide="colorbar",na.value="transparent",
+                       name = "no. radiocarbon dates") +
   ggrepel::geom_label_repel(
     aes(label = label, geometry = geom),
     stat = "sf_coordinates",
     min.segment.length = 0.1,
-    size = 7
+    size = 2.5
   ) +
 coord_sf() +
   theme_bw() +
   theme(
-    legend.position = c(.15, .2),
+    legend.position = "bottom",
+    legend.key.width=unit(0.05,"npc"),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_blank(),
@@ -1323,20 +1355,75 @@ coord_sf() +
     axis.title = element_blank(),
     axis.line = element_blank(),
     axis.ticks = element_blank(),
-    legend.text = element_text(size = 15, family = "Helvetica"),
+    legend.text = element_text(size = 12, family = "Helvetica"),
     legend.title = element_text(
-      size = 16,
+      size = 14,
       family = "Helvetica",
       face = "bold"
     )
   )
 
+spd_counties_sites <- ggplot(data = SWUS_counties_fill) +
+  geom_sf(color = "black",
+          aes(fill = no_sites),
+          size = 0.25,
+          na.rm = TRUE
+          ) +
+  scale_fill_continuous(low="#FFC20A", high="#0C7BDC",
+                       guide="colorbar",na.value="transparent",
+                       name = "no. sites with \nradiocarbon dates") +
+  ggrepel::geom_label_repel(
+    aes(label = label, geometry = geom),
+    stat = "sf_coordinates",
+    min.segment.length = 0.1,
+    size = 2.5
+  ) +
+coord_sf() +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    legend.key.width=unit(0.05,"npc"),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 12, family = "Helvetica"),
+    legend.title = element_text(
+      size = 14,
+      family = "Helvetica",
+      face = "bold"
+    )
+  )
+
+# ggplot2::ggsave(
+#   filename = here::here("vignettes/figures/Figure_8.png"),
+#   plot = spd_counties,
+#   width = 15.51,
+#   height = 10.32,
+#   dpi = 600
+# )
+
+Figure_8 <-
+  cowplot::plot_grid(
+    spd_counties_samples,
+    spd_counties_sites,
+    labels = "AUTO",
+    label_x = 0.36,
+    label_y = 0.99,
+    align = "v",
+    nrow = 2,
+    ncol = 1
+  )
+
 ggplot2::ggsave(
+  Figure_8,
   filename = here::here("vignettes/figures/Figure_8.png"),
-  plot = spd_counties,
-  width = 15.51,
-  height = 10.32,
-  dpi = 600
+  width = 13.7,
+  height = 10.2,
+  dpi = 900
 )
 
 ```
