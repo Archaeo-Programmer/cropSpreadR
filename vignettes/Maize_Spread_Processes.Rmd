@@ -1381,7 +1381,8 @@ sw.caldates <- sw_rc_subset %>%
       nsim = nsim,
       timeRange = c(7000, 0),
       model = "exponential",
-      runm = 100
+      runm = 100,
+      method = c("calsample")
     )
   }))
 
@@ -1712,6 +1713,102 @@ nodes1 <- nodes1 %>%
   dplyr::arrange(id) %>%
   dplyr::select(id, everything())
 
+country_shapes1 <-
+  ggplot2::geom_polygon(
+    aes(x = long, y = lat, group = group),
+    data = map_data('state'),
+    fill = "white",
+    color = "black",
+    size = 0.15
+  )
+
+mapcoords1 <-
+  ggplot2::coord_fixed(xlim = c(-114.814521, -105),
+                       ylim = c(31.333254, 42))
+
+legend.breaks = 3
+
+edges1 <- data.frame(
+  from = c(1:2, 4:7, 9:14),
+  to = c(2:3, 5:8, 10:15),
+  color = nodes1$delta_lat_km[!is.na(nodes1$delta_lat_km)]
+)
+
+nodes_dups <- nodes1 %>%
+  dplyr::filter(!dplyr::row_number() %in% c(4, 9))
+
+edges_for_plot1 <- edges1 %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
+  dplyr::rename(x = lon, y = lat) %>%
+  dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
+  dplyr::rename(xend = lon, yend = lat)
+
+assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
+
+fig_s1A <-
+ggplot(nodes1) +
+  country_shapes1 +
+  geom_curve(
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend,
+      color = color
+    ),
+    arrow = arrow(length = unit(0.02, "npc"), type = "closed"),
+    data = edges_for_plot1,
+    curvature = 0.3,
+    alpha = 1.0,
+    size = 1.0
+  ) +
+  scale_color_distiller(palette = "RdYlGn",
+                        direction = 1,
+                        name = "\u0394 km N/year") +
+  geom_point(
+    aes(x = lon, y = lat),
+    # draw nodes
+    shape = 21,
+    fill = 'white',
+    color = 'black',
+    stroke = 0.5,
+    size = 3.5
+  ) +
+  ggrepel::geom_label_repel(
+    aes(x = lon, y = lat, label = name),
+    # draw text labels
+    size = 2.75,
+    color = "black",
+    min.segment.length = 0.15,
+    fill = alpha(c("white"), 0.7),
+    force = 34,
+    nudge_x = -0.51,
+    nudge_y = 0.15,
+    family = "Helvetica"
+  ) +
+  mapcoords1 +
+  theme_void() +
+  theme(
+    plot.margin = grid::unit(c(2, 2, 2, 2), "mm"),
+    legend.box.spacing = unit(20.0, "pt"),
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 14, family = "Helvetica"),
+    legend.title = element_text(
+      size = 18,
+      face = "bold",
+      family = "Helvetica"
+    )
+  )
+
+# ggplot2::ggsave(
+#   fig_s1A,
+#   filename = here::here("vignettes/figures/supplemental/Figure_S1A.png"),
+#   width = 13.7,
+#   height = 10.2,
+#   dpi = 900
+# )
+
+
 edges1 <- data.frame(
   from = c(1:2, 4:7, 9:14),
   to = c(2:3, 5:8, 10:15),
@@ -1729,21 +1826,7 @@ edges_for_plot1 <- edges1 %>%
 
 assertthat::assert_that(nrow(edges_for_plot1) == nrow(edges1))
 
-country_shapes1 <-
-  ggplot2::geom_polygon(
-    aes(x = long, y = lat, group = group),
-    data = map_data('state'),
-    fill = "white",
-    color = "black",
-    size = 0.15
-  )
-mapcoords1 <-
-  ggplot2::coord_fixed(xlim = c(-114.814521, -105),
-                       ylim = c(31.333254, 42))
-
-legend.breaks = 3
-
-fig_s1 <-
+fig_s1B <-
 ggplot(nodes1) +
   country_shapes1 +
   geom_curve(
@@ -1798,8 +1881,28 @@ ggplot(nodes1) +
     )
   )
 
+# ggplot2::ggsave(
+#   fig_s1B,
+#   filename = here::here("vignettes/figures/supplemental/Figure_S1B.png"),
+#   width = 13.7,
+#   height = 10.2,
+#   dpi = 900
+# )
+
+Figure_S1 <-
+  cowplot::plot_grid(
+    fig_s1A,
+    fig_s1B,
+    labels = "AUTO",
+    label_x = 0.233,
+    label_y = 0.99,
+    align = "v",
+    nrow = 2,
+    ncol = 1
+  )
+
 ggplot2::ggsave(
-  fig_s1,
+  Figure_S1,
   filename = here::here("vignettes/figures/supplemental/Figure_S1.png"),
   width = 13.7,
   height = 10.2,
