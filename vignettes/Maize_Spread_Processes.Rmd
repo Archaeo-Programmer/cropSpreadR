@@ -1564,7 +1564,7 @@ monte_carlo_plot <-
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/supplemental/Figure_9.png"),
+  filename = here::here("vignettes/figures/Figure_9.png"),
   plot = monte_carlo_plot,
   width = 16,
   height = 18,
