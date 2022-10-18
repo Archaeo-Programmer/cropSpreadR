@@ -2283,62 +2283,6 @@ ggplot2::ggsave(
   dpi = 600
 )
 
-
-DK.caldates = calibrate(x = pima$Age,
-                        errors = pima$Error,
-                        calCurves = 'intcal20')
-
-DK.bins = binPrep(sites = pima$SiteIDName,
-                  ages = pima$Age,
-                  h = 100)
-
-DK.randates = sampleDates(DK.caldates,
-                          #bins = DK.bins,
-                          nsim = 100,
-                          verbose = FALSE)
-
-D.ckde = ckde(DK.randates, timeRange = c(6000, 1500), bw = 200)
-
-nsim = 100
-
-expnull <-
-  modelTest(
-    DK.caldates,
-    errors = pima$Error,
-    #bins = DK.bins,
-    nsim = nsim,
-    timeRange = c(6000, 1500),
-    model = "exponential",
-    runm = 100
-  )
-
-section_area_data <- bind_rows(perm.emedyd[["observed"]], .id = "county_st")
-
-
-summary(perm.emedyd)
-
-par(mfrow = c(4, 3))
-plot(perm.emedyd, focalm = 1, main = "pima, arizona")
-plot(perm.emedyd, focalm = 2, main = "navajo, arizona")
-plot(perm.emedyd, focalm = 3, main = "montrose, colorado")
-plot(perm.emedyd, focalm = 4, main = "catron, new mexico")
-plot(perm.emedyd, focalm = 5, main = "kane, utah")
-plot(perm.emedyd, focalm = 6, main = "san juan, utah")
-plot(perm.emedyd, focalm = 7, main = "box elder, utah")
-plot(perm.emedyd, focalm = 8, main = "sevier, utah")
-plot(perm.emedyd, focalm = 9, main = "salt lake, utah")
-plot(perm.emedyd, focalm = 10, main = "uintah, utah")
-plot(perm.emedyd, focalm = 11, main = "daggett, utah")
-
-
-emedyd.spd = stackspd(
-  x = cal.emedyd,
-  group = sw_rc_subset$county_st,
-  timeRange = c(7000, 500),
-  runm = 50,
-  verbos = FALSE
-)
-
 ```
 
 
