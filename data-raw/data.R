@@ -382,7 +382,7 @@ by_county <- sw_rc %>%
   # Group by name, region, and n to nest data.
   dplyr::group_by(NAME, REGION, n) %>%
   tidyr::nest() %>%
-  dplyr::mutate(spds = purrr::map(data, makeSPD))
+  dplyr::mutate(spds = purrr::map(data, cropSpreadR::makeSPD))
 
 SPD_county <- by_county %>%
   dplyr::mutate(spds = purrr::map(

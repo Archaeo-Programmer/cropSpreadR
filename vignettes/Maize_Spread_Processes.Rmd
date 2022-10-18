@@ -1277,299 +1277,7 @@ ggplot2::ggsave(
 
 ```
 
-```{r Figure_8, fig.cap="Figure 8. The MNF sites (red points) relative to the composite kernel density estimates (CKDE) for the counties in the four-state southwestern United States, which contain the MNF sites (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Sample sizes for the CKDEs shown in parentheses. Note variability in scales on y axis. We do not include Delta County, Colorado as the sample size was small and dominated by samples from Eagle Rock Shelter (5DT813, containing 51 of the 67 samples in the county).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
-
-sw_rc <- cropSpreadR::sw_rc
-
-#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
-frontier_counties <- c("sevier, utah", "daggett, utah", "catron, new mexico",
-                       "navajo, arizona", "salt lake, utah", "pima, arizona",
-                       "kane, utah", "montrose, colorado", "uintah, utah", "box elder, utah",
-                       "san juan, utah")
-
-ckde_test1 <- sw_rc %>%
-  dplyr::filter(county_st %in% frontier_counties) %>%
-  dplyr::select(SiteIDName, county_st, Age, Error, calib)
-
-# Inspect for outlying sites (i.e., sites that have a lot of samples for when number of sites overall is relatively low).
-samples_site_county <- cropSpreadR::sw_rc %>%
-  dplyr::filter(county_st %in% c(frontier_counties, "delta, colorado")) %>%
-  dplyr::group_by(SiteIDName, county_st, SiteName) %>%
-  dplyr::summarise(count = dplyr::n()) %>%
-  dplyr::group_by(county_st) %>%
-  dplyr::mutate(id = dplyr::row_number(),
-                county_st = tools::toTitleCase(county_st)) %>%
-  ggplot(aes(x = count)) +
-  geom_histogram(binwidth = 10) +
-  scale_x_continuous(breaks = seq(0, 150, 25)) +
-  xlab("Number of Samples/Site") +
-  ylab("Count") +
-  facet_wrap(. ~ county_st, ncol = 3) +
-  theme_bw() +
-  theme(
-    strip.text.x = element_text(
-      size = 14,
-      family = "Helvetica",
-      face = "bold"
-    ),
-    axis.text = element_text(
-      size = 16,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 18,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 18,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    )
-  )
-
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/supplemental/Figure_S2.png"),
-  plot = samples_site_county,
-  dpi = 600
-)
-
-sites_to_subsample <- c("42BO1", "42SV1686")
-
-ckde_test2 <- ckde_test1 %>%
-  dplyr::filter(SiteIDName %in% sites_to_subsample) %>%
-  dplyr::group_by(SiteIDName) %>%
-  dplyr::slice_sample(prop = 0.2, replace = TRUE) %>%
-  dplyr::bind_rows(ckde_test1 %>% 
-                     dplyr::filter(!SiteIDName %in% sites_to_subsample),
-                   .,
-  ) %>%
-  dplyr::select(-SiteIDName) %>%
-  dplyr::group_by(county_st) %>%
-  dplyr::mutate(n = dplyr::n()) %>%
-  dplyr::group_by(n, .add = TRUE) %>%
-  tidyr::nest() %>%
-  dplyr::mutate(ckde = purrr::map(
-    data,
-    ~ cropSpreadR::calc_ckde_dates(
-      .x,
-      interval = 0.95,
-      timeRange_max = 9000,
-      timeRange_min = 0
-    )
-  )) %>%
-  dplyr::select(-data) %>%
-  tidyr::unnest(ckde)
-
-maize_oldest <- maize_frontier_swus %>% 
-  sf::st_drop_geometry() %>%
-  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>% 
-  dplyr::select(county_st, SiteNameID, Date) %>% 
-  dplyr::mutate(date_maize = Date) %>% 
-  dplyr::group_by(county_st) %>% 
-  dplyr::slice_min(Date) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::arrange(Date)
-
-ckde_test3 <- ckde_test2 %>%
-  dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
-  dplyr::mutate(county_st2 = county_st,
-                county_st = tools::toTitleCase(county_st),
-                county_st = paste0(county_st, " (n = ", n, ")")) %>%
-  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
-
-county_order <- cropSpreadR::SWUS_counties %>%
-  sf::st_drop_geometry() %>%
-  dplyr::select(county_st2 = county_st, centroid_lat) %>%
-  dplyr::arrange(desc(centroid_lat)) %>%
-  dplyr::filter(county_st2 %in% frontier_counties) %>%
-  dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = "county_st2") %>%
-  dplyr::pull(county_st)
-
-
-ckde_plot <-
-  ggplot(data = ckde_test3, aes(y = avg, x = Date)) +
-  geom_ribbon(aes(ymin=lo, ymax=hi),
-              alpha=0.4,
-              fill="grey70") +
-  geom_line() +
-  geom_point(
-    aes(y = avg, x = date_maize),
-    size = 2.75,
-    color = "red",
-    inherit.aes = FALSE
-  ) +
-  ggrepel::geom_label_repel(
-    aes(y = avg, x = date_maize, label = SiteNameID),
-    color = "red",
-    cex = 5,
-    show.legend  = F,
-    min.segment.length = unit(0.1, 'lines'),
-    box.padding = 1,
-    nudge_x = -550,
-    nudge_y = 0.35,
-    fill = alpha(c("white"), 0.6),
-    label.size = NA
-  ) +
-  theme_bw() +
-  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
-  scale_y_continuous(
-    breaks = function(x)
-      seq(0, max(x), length.out = 3),
-    labels = function(y)
-      sprintf("%.4f", y)
-  ) +
-  facet_wrap( ~ factor(county_st, levels = county_order),
-              scales = "free_y",
-              ncol = 1) +
-  xlab("Years BC/AD") +
-  ylab("Composite Kernel Density Estimates") +
-  theme(
-    legend.position = "none",
-    panel.spacing = unit(1, "lines"),
-    strip.text.x = element_text(
-      size = 16,
-      family = "Helvetica",
-      face = "bold"
-    ),
-    axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 20,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_8.png"),
-  plot = ckde_plot,
-  width = 16,
-  height = 18,
-  dpi = 600
-)
-
-
-DK.caldates = calibrate(x = pima$Age,
-                        errors = pima$Error,
-                        calCurves = 'intcal20')
-
-DK.bins = binPrep(sites = pima$SiteIDName,
-                  ages = pima$Age,
-                  h = 100)
-
-DK.randates = sampleDates(DK.caldates,
-                          #bins = DK.bins,
-                          nsim = 100,
-                          verbose = FALSE)
-
-D.ckde = ckde(DK.randates, timeRange = c(6000, 1500), bw = 200)
-
-nsim = 100
-
-expnull <-
-  modelTest(
-    DK.caldates,
-    errors = pima$Error,
-    #bins = DK.bins,
-    nsim = nsim,
-    timeRange = c(6000, 1500),
-    model = "exponential",
-    runm = 100
-  )
-
-section_area_data <- bind_rows(perm.emedyd[["observed"]], .id = "county_st")
-
-sw_rc_subset <- sw_rc %>% 
-  dplyr::filter(county_st %in% frontier_counties)
-  
-cal.emedyd = calibrate(x = sw_rc_subset$Age,
-                        errors = sw_rc_subset$Error, normalised = FALSE)
-
-perm.emedyd = permTest(
-  x = cal.emedyd,
-  marks = sw_rc_subset$county_st,
-  timeRange = c(7000, 500),
-  nsim = nsim,
-  runm = 50
-)
-
-
-perm_spd_output <- dplyr::bind_cols(dplyr::bind_rows(perm.emedyd[["observed"]], .id = "county_st"), 
-                                    dplyr::bind_rows(lapply(perm.emedyd[["envelope"]], as.data.frame)))
-
-pvalues <- data.frame(pvalue = perm.emedyd[["pValueList"]]) %>%
-  tibble::rownames_to_column("county_st")
-
-
-summary(perm.emedyd)
-
-par(mfrow = c(4, 3))
-plot(perm.emedyd, focalm = 1, main = "pima, arizona")
-plot(perm.emedyd, focalm = 2, main = "navajo, arizona")
-plot(perm.emedyd, focalm = 3, main = "montrose, colorado")
-plot(perm.emedyd, focalm = 4, main = "catron, new mexico")
-plot(perm.emedyd, focalm = 5, main = "kane, utah")
-plot(perm.emedyd, focalm = 6, main = "san juan, utah")
-plot(perm.emedyd, focalm = 7, main = "box elder, utah")
-plot(perm.emedyd, focalm = 8, main = "sevier, utah")
-plot(perm.emedyd, focalm = 9, main = "salt lake, utah")
-plot(perm.emedyd, focalm = 10, main = "uintah, utah")
-plot(perm.emedyd, focalm = 11, main = "daggett, utah")
-
-
-emedyd.spd = stackspd(
-  x = cal.emedyd,
-  group = sw_rc_subset$county_st,
-  timeRange = c(7000, 500),
-  runm = 50,
-  verbos = FALSE
-)
-
-```
-
-```{r Figure_9, fig.cap="Figure 9. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 # Get sites that are on the northern maize frontier through time from cropDiffusionR package.
 temp <- tempfile()
@@ -1624,10 +1332,242 @@ coord_sf() +
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/Figure_9.png"),
+  filename = here::here("vignettes/figures/Figure_8.png"),
   plot = spd_counties,
   width = 15.51,
   height = 10.32,
+  dpi = 600
+)
+
+```
+
+```{r Figure_9, fig.cap="Figure 9. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+sw_rc <- cropSpreadR::sw_rc
+
+#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
+frontier_counties <-
+  c(
+    "sevier, utah",
+    "daggett, utah",
+    "catron, new mexico",
+    "navajo, arizona",
+    "salt lake, utah",
+    "pima, arizona",
+    "kane, utah",
+    "montrose, colorado",
+    "uintah, utah",
+    "box elder, utah",
+    "san juan, utah"
+  )
+
+sw_rc_subset <- sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties)
+
+nsim = 100
+
+sw.caldates <- sw_rc_subset %>%
+  dplyr::select(county_st, Age, Error, calib) %>%
+  dplyr::group_by(county_st) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(monte_carlo = purrr::map(data, function(x) {
+    sw.caldates <-
+      rcarbon::calibrate(x = x$Age,
+                         errors = x$Error,
+                         calCurves = 'intcal20')
+    rcarbon::modelTest(
+      sw.caldates,
+      errors = x$Error,
+      nsim = nsim,
+      timeRange = c(7000, 0),
+      model = "exponential",
+      runm = 100
+    )
+  }))
+
+monte_carlo_sim <- sw.caldates %>%
+  dplyr::mutate(
+    pvalue = purrr::map_dbl(monte_carlo, ~ .x$pval),
+    n = purrr::map_dbl(monte_carlo, ~ .x$n),
+    pvalue = ifelse(pvalue < 0.01, paste0("p < 0.01"), paste0("p = ", sprintf("%.2f", pvalue))),
+    monte_carlo = purrr::map(
+      monte_carlo,
+      ~ .x$result %>% dplyr::mutate(Date = rcarbon::BPtoBCAD(calBP))
+    )
+  ) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest(monte_carlo) %>%
+  dplyr::mutate(
+    boom_bust = dplyr::case_when(
+      PrDens < hi & PrDens > lo ~ "medium",
+      PrDens > hi ~ "indianred",
+      PrDens < lo ~ "royalblue",
+      TRUE ~ "medium"
+    )
+  )
+
+maize_oldest <- maize_frontier_swus %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>%
+  dplyr::select(county_st, SiteNameID, Date) %>%
+  dplyr::mutate(date_maize = Date) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::slice_min(Date) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(Date) %>%
+  dplyr::filter(county_st %in% frontier_counties)
+
+ckde_test3 <- monte_carlo_sim %>%
+  dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
+  dplyr::mutate(
+    county_st2 = county_st,
+    county_st = tools::toTitleCase(county_st),
+    county_st = paste0(county_st, " (n = ", n, "; ",  pvalue, ")")
+  ) %>%
+  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
+
+county_order <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st2 = county_st, centroid_lat) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  dplyr::filter(county_st2 %in% frontier_counties) %>%
+  dplyr::left_join(
+    .,
+    ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(),
+    by = "county_st2"
+  ) %>%
+  dplyr::pull(county_st)
+
+condensed <- monte_carlo_sim %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(change = cumsum(boom_bust != lag(boom_bust, def = first(boom_bust)))) %>%
+  dplyr::group_by(change, .add = TRUE) %>%
+  dplyr::filter(dplyr::row_number() %in% c(1, n()) &
+                  boom_bust != "medium") %>%
+  dplyr::mutate(time = row_number()) %>% 
+  dplyr::ungroup() %>% 
+  tidyr::complete(county_st, change, time) %>%
+  tidyr::fill(dplyr::everything()) %>% 
+  dplyr::select(-time) %>% 
+  dplyr::group_by(grp = stringr::str_c('Column', rep(1:2, length.out = n()))) %>%
+  dplyr::mutate(rn = dplyr::row_number()) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(county_st, Date, boom_bust, grp, rn) %>%
+  tidyr::pivot_wider(names_from = grp, values_from = Date) %>%
+  dplyr::select(-rn,
+                xmin = Column1,
+                xmax = Column2,
+                fill = boom_bust) %>%
+  dplyr::mutate(ymin = -Inf, ymax = Inf) %>%
+  dplyr::left_join(
+    .,
+    ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(),
+    by = c("county_st" = "county_st2")
+  ) %>%
+  dplyr::select(-county_st, county_st = county_st.y) %>%
+  dplyr::mutate(county_st = factor(county_st, levels = county_order))
+
+monte_carlo_plot <-
+  ggplot(data = ckde_test3, aes(y = PrDens, x = Date)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi),
+              alpha = 0.4,
+              fill = "grey70") +
+  geom_rect(
+    aes(
+      xmin = xmin,
+      xmax = xmax,
+      ymin = ymin,
+      ymax = ymax,
+      fill = I(fill)
+    ),
+    alpha = 0.4,
+    inherit.aes = FALSE,
+    data = condensed
+  ) +
+  geom_line() +
+  geom_point(
+    aes(y = PrDens, x = date_maize),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  ggrepel::geom_label_repel(
+    aes(y = PrDens, x = date_maize, label = SiteNameID),
+    color = "red",
+    cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size = NA
+  ) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(-4000, 2000, 500),
+                     limits = c(-4100, 2000)) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.2f", y)
+  ) +
+  facet_wrap(~ factor(county_st, levels = county_order),
+             scales = "free_y",
+             ncol = 1) +
+  xlab("Years BC/AD") +
+  ylab("Summed Probability") +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/supplemental/Figure_9.png"),
+  plot = monte_carlo_plot,
+  width = 16,
+  height = 18,
   dpi = 600
 )
 
@@ -1678,9 +1618,6 @@ dist <- (maize_frontier_swus %>%
 out <- data.frame(type = c("max_swus", "LC_ST", "LC_WM"),
                   rate = c(max_spread, LC_ST_rate, LC_WM_rate)) %>% 
   dplyr::mutate(time = dist / rate)
-
-
-
 
 ```
 
@@ -2028,7 +1965,7 @@ cropSpreadR::sw_rc %>%
 
 ```
 
-```{r Figure_S4, fig.cap="Figure S4. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+```{r Figure_S4, fig.cap="Figure S4. The MNF sites (red points) relative to the composite kernel density estimates (CKDE) for the counties in the four-state southwestern United States, which contain the MNF sites (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Sample sizes for the CKDEs shown in parentheses. Note variability in scales on y axis. We do not include Delta County, Colorado as the sample size was small and dominated by samples from Eagle Rock Shelter (5DT813, containing 51 of the 67 samples in the county).", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -2038,39 +1975,90 @@ frontier_counties <- c("sevier, utah", "daggett, utah", "catron, new mexico",
                        "kane, utah", "montrose, colorado", "uintah, utah", "box elder, utah",
                        "san juan, utah")
 
-sw_rc_subset <- sw_rc %>% 
-  dplyr::filter(county_st %in% frontier_counties)
-  
-cal.emedyd = calibrate(x = sw_rc_subset$Age,
-                        errors = sw_rc_subset$Error, normalised = FALSE)
+ckde_test1 <- sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties) %>%
+  dplyr::select(SiteIDName, county_st, Age, Error, calib)
 
-perm.emedyd = permTest(
-  x = cal.emedyd,
-  marks = sw_rc_subset$county_st,
-  timeRange = c(7000, 500),
-  nsim = nsim,
-  runm = 50
-) 
+# Inspect for outlying sites (i.e., sites that have a lot of samples for when number of sites overall is relatively low).
+samples_site_county <- cropSpreadR::sw_rc %>%
+  dplyr::filter(county_st %in% c(frontier_counties, "delta, colorado")) %>%
+  dplyr::group_by(SiteIDName, county_st, SiteName) %>%
+  dplyr::summarise(count = dplyr::n()) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(id = dplyr::row_number(),
+                county_st = tools::toTitleCase(county_st)) %>%
+  ggplot(aes(x = count)) +
+  geom_histogram(binwidth = 10) +
+  scale_x_continuous(breaks = seq(0, 150, 25)) +
+  xlab("Number of Samples/Site") +
+  ylab("Count") +
+  facet_wrap(. ~ county_st, ncol = 3) +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.text = element_text(
+      size = 16,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 18,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 18,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    )
+  )
 
-pvalues <- data.frame(pvalue = perm.emedyd[["pValueList"]]) %>%
-  tibble::rownames_to_column("county_st")
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/supplemental/Figure_S2.png"),
+  plot = samples_site_county,
+  dpi = 600
+)
 
-sample_size <- dplyr::bind_rows(perm.emedyd[["metadata"]]) %>% 
-  tidyr::pivot_longer(everything(), names_to = "county_st", values_to = "n") %>% 
-  dplyr::distinct()
+sites_to_subsample <- c("42BO1", "42SV1686")
 
-perm_spd_output <- dplyr::bind_cols(dplyr::bind_rows(perm.emedyd[["observed"]], .id = "county_st"), 
-                                    dplyr::bind_rows(lapply(perm.emedyd[["envelope"]], as.data.frame))) %>% 
-  dplyr::rename(lo = V1, hi = V2) %>% 
-  dplyr::mutate(Date = rcarbon::BPtoBCAD(calBP)) %>% 
-  tibble::tibble() %>% 
-  dplyr::left_join(., pvalues, by = "county_st") %>% 
-  dplyr::left_join(., sample_size, by = "county_st") %>% 
-  dplyr::mutate(pvalue = ifelse(pvalue < 0.01, paste0("p < 0.01"), paste0("p = ", sprintf("%.2f", pvalue))),
-                boom_bust = dplyr::case_when(PrDens < hi & PrDens > lo ~ "medium", 
-                                             PrDens > hi ~ "indianred",
-                                             PrDens < lo ~ "royalblue",
-                                             TRUE ~ "medium"))
+ckde_test2 <- ckde_test1 %>%
+  dplyr::filter(SiteIDName %in% sites_to_subsample) %>%
+  dplyr::group_by(SiteIDName) %>%
+  dplyr::slice_sample(prop = 0.2, replace = TRUE) %>%
+  dplyr::bind_rows(ckde_test1 %>% 
+                     dplyr::filter(!SiteIDName %in% sites_to_subsample),
+                   .,
+  ) %>%
+  dplyr::select(-SiteIDName) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(n = dplyr::n()) %>%
+  dplyr::group_by(n, .add = TRUE) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(ckde = purrr::map(
+    data,
+    ~ cropSpreadR::calc_ckde_dates(
+      .x,
+      interval = 0.95,
+      timeRange_max = 9000,
+      timeRange_min = 0
+    )
+  )) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest(ckde)
 
 maize_oldest <- maize_frontier_swus %>% 
   sf::st_drop_geometry() %>%
@@ -2080,14 +2068,13 @@ maize_oldest <- maize_frontier_swus %>%
   dplyr::group_by(county_st) %>% 
   dplyr::slice_min(Date) %>% 
   dplyr::ungroup() %>% 
-  dplyr::arrange(Date) %>% 
-  dplyr::filter(county_st %in% frontier_counties)
+  dplyr::arrange(Date)
 
-ckde_test3 <- perm_spd_output %>%
+ckde_test3 <- ckde_test2 %>%
   dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
   dplyr::mutate(county_st2 = county_st,
                 county_st = tools::toTitleCase(county_st),
-                county_st = paste0(county_st, " (n = ", n, "; ",  pvalue, ")")) %>%
+                county_st = paste0(county_st, " (n = ", n, ")")) %>%
   dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
 
 county_order <- cropSpreadR::SWUS_counties %>%
@@ -2098,20 +2085,219 @@ county_order <- cropSpreadR::SWUS_counties %>%
   dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = "county_st2") %>%
   dplyr::pull(county_st)
 
-condensed <- perm_spd_output %>% 
-  dplyr::group_by(county_st) %>% 
-  dplyr::mutate(change = cumsum(boom_bust != lag(boom_bust, def = first(boom_bust)))) %>% 
-  dplyr::group_by(change, .add = TRUE) %>% 
-  dplyr::filter(dplyr::row_number() %in% c(1, n()) & boom_bust != "medium") %>% 
-  dplyr::group_by(grp = str_c('Column', rep(1:2, length.out = n()))) %>%
-  dplyr::mutate(rn = row_number()) %>%
+ckde_plot <-
+  ggplot(data = ckde_test3, aes(y = avg, x = Date)) +
+  geom_ribbon(aes(ymin=lo, ymax=hi),
+              alpha=0.4,
+              fill="grey70") +
+  geom_line() +
+  geom_point(
+    aes(y = avg, x = date_maize),
+    size = 2.75,
+    color = "red",
+    inherit.aes = FALSE
+  ) +
+  ggrepel::geom_label_repel(
+    aes(y = avg, x = date_maize, label = SiteNameID),
+    color = "red",
+    cex = 5,
+    show.legend  = F,
+    min.segment.length = unit(0.1, 'lines'),
+    box.padding = 1,
+    nudge_x = -550,
+    nudge_y = 0.35,
+    fill = alpha(c("white"), 0.6),
+    label.size = NA
+  ) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
+  scale_y_continuous(
+    breaks = function(x)
+      seq(0, max(x), length.out = 3),
+    labels = function(y)
+      sprintf("%.4f", y)
+  ) +
+  facet_wrap( ~ factor(county_st, levels = county_order),
+              scales = "free_y",
+              ncol = 1) +
+  xlab("Years BC/AD") +
+  ylab("Composite Kernel Density Estimates") +
+  theme(
+    legend.position = "none",
+    panel.spacing = unit(1, "lines"),
+    strip.text.x = element_text(
+      size = 16,
+      family = "Helvetica",
+      face = "bold"
+    ),
+    axis.ticks.length = unit(0.125, "inch"),
+    #ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 20,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggplot2::ggsave(
+  filename = here::here("vignettes/figures/Figure_S4.png"),
+  plot = ckde_plot,
+  width = 16,
+  height = 18,
+  dpi = 900
+)
+
+```
+
+```{r Figure_S5, fig.cap="Figure S5. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.width = 15.51, fig.height = 10.32, fig.align = "left"}
+
+sw_rc <- cropSpreadR::sw_rc
+
+#frontier_counties <- unique(maize_frontier_swus$county_st)[!grepl("delta, colorado", unique(maize_frontier_swus$county_st))]
+frontier_counties <-
+  c(
+    "sevier, utah",
+    "daggett, utah",
+    "catron, new mexico",
+    "navajo, arizona",
+    "salt lake, utah",
+    "pima, arizona",
+    "kane, utah",
+    "montrose, colorado",
+    "uintah, utah",
+    "box elder, utah",
+    "san juan, utah"
+  )
+
+sw_rc_subset <- sw_rc %>%
+  dplyr::filter(county_st %in% frontier_counties)
+
+cal.emedyd = rcarbon::calibrate(x = sw_rc_subset$Age,
+                                errors = sw_rc_subset$Error,
+                                normalised = FALSE)
+
+perm.emedyd = rcarbon::permTest(
+  x = cal.emedyd,
+  marks = sw_rc_subset$county_st,
+  timeRange = c(7000, 0),
+  nsim = nsim,
+  runm = 50
+)
+
+pvalues <- data.frame(pvalue = perm.emedyd[["pValueList"]]) %>%
+  tibble::rownames_to_column("county_st")
+
+sample_size <- dplyr::bind_rows(perm.emedyd[["metadata"]]) %>%
+  tidyr::pivot_longer(everything(), names_to = "county_st", values_to = "n") %>%
+  dplyr::distinct()
+
+perm_spd_output <-
+  dplyr::bind_cols(dplyr::bind_rows(perm.emedyd[["observed"]], .id = "county_st"),
+                   dplyr::bind_rows(lapply(perm.emedyd[["envelope"]], as.data.frame))) %>%
+  dplyr::rename(lo = V1, hi = V2) %>%
+  dplyr::mutate(Date = rcarbon::BPtoBCAD(calBP)) %>%
+  tibble::tibble() %>%
+  dplyr::left_join(., pvalues, by = "county_st") %>%
+  dplyr::left_join(., sample_size, by = "county_st") %>%
+  dplyr::mutate(
+    pvalue = ifelse(pvalue < 0.01, paste0("p < 0.01"), paste0("p = ", sprintf("%.2f", pvalue))),
+    boom_bust = dplyr::case_when(
+      PrDens < hi & PrDens > lo ~ "medium",
+      PrDens > hi ~ "indianred",
+      PrDens < lo ~ "royalblue",
+      TRUE ~ "medium"
+    )
+  )
+
+maize_oldest <- maize_frontier_swus %>%
+  sf::st_drop_geometry() %>%
+  dplyr::mutate(SiteNameID = dplyr::coalesce(SiteName, SiteID)) %>%
+  dplyr::select(county_st, SiteNameID, Date) %>%
+  dplyr::mutate(date_maize = Date) %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::slice_min(Date) %>%
   dplyr::ungroup() %>%
-  dplyr::select(county_st, Date, boom_bust, grp, rn) %>% 
-  tidyr::pivot_wider(names_from = grp, values_from = Date) %>% 
-  dplyr::select(-rn, xmin = Column1, xmax = Column2, fill = boom_bust) %>% 
-  dplyr::mutate(ymin = -Inf, ymax = Inf) %>% 
-  dplyr::left_join(., ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(), by = c("county_st" = "county_st2")) %>% 
-  dplyr::select(-county_st, county_st = county_st.y) %>% 
+  dplyr::arrange(Date) %>%
+  dplyr::filter(county_st %in% frontier_counties)
+
+ckde_test3 <- perm_spd_output %>%
+  dplyr::left_join(., maize_oldest, by = c("county_st", "Date")) %>%
+  dplyr::mutate(
+    county_st2 = county_st,
+    county_st = tools::toTitleCase(county_st),
+    county_st = paste0(county_st, " (n = ", n, "; ",  pvalue, ")")
+  ) %>%
+  dplyr::mutate(SiteNameID = ifelse(SiteNameID == "Elsinore Burial", "42SV2111", SiteNameID))
+
+county_order <- cropSpreadR::SWUS_counties %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(county_st2 = county_st, centroid_lat) %>%
+  dplyr::arrange(desc(centroid_lat)) %>%
+  dplyr::filter(county_st2 %in% frontier_counties) %>%
+  dplyr::left_join(
+    .,
+    ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(),
+    by = "county_st2"
+  ) %>%
+  dplyr::pull(county_st)
+
+condensed <- perm_spd_output %>%
+  dplyr::group_by(county_st) %>%
+  dplyr::mutate(change = cumsum(boom_bust != lag(boom_bust, def = first(boom_bust)))) %>%
+  dplyr::group_by(change, .add = TRUE) %>%
+  dplyr::filter(dplyr::row_number() %in% c(1, n()) &
+                  boom_bust != "medium") %>%
+  dplyr::mutate(time = row_number()) %>% 
+  dplyr::ungroup() %>% 
+  tidyr::complete(county_st, change, time) %>%
+  tidyr::fill(dplyr::everything()) %>% 
+  dplyr::select(-time) %>% 
+  dplyr::group_by(grp = stringr::str_c('Column', rep(1:2, length.out = n()))) %>%
+  dplyr::mutate(rn = dplyr::row_number()) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(county_st, Date, boom_bust, grp, rn) %>%
+  tidyr::pivot_wider(names_from = grp, values_from = Date) %>%
+  dplyr::select(-rn,
+                xmin = Column1,
+                xmax = Column2,
+                fill = boom_bust) %>%
+  dplyr::mutate(ymin = -Inf, ymax = Inf) %>%
+  dplyr::left_join(
+    .,
+    ckde_test3 %>% dplyr::ungroup() %>% dplyr::select(county_st, county_st2) %>% dplyr::distinct(),
+    by = c("county_st" = "county_st2")
+  ) %>%
+  dplyr::select(-county_st, county_st = county_st.y) %>%
   dplyr::mutate(county_st = factor(county_st, levels = county_order))
 
 perm_spd_plot <-
@@ -2151,16 +2337,17 @@ perm_spd_plot <-
     label.size = NA
   ) +
   theme_bw() +
-  scale_x_continuous(breaks = seq(-4000, 2000, 1000), limits = c(-4100, 2000)) +
+  scale_x_continuous(breaks = seq(-4000, 2000, 1000),
+                     limits = c(-4100, 2000)) +
   scale_y_continuous(
     breaks = function(x)
       seq(0, max(x), length.out = 3),
     labels = function(y)
       sprintf("%.2f", y)
   ) +
-  facet_wrap( ~ factor(county_st, levels = county_order),
-              scales = "free_y",
-              ncol = 1) +
+  facet_wrap(~ factor(county_st, levels = county_order),
+             scales = "free_y",
+             ncol = 1) +
   xlab("Years BC/AD") +
   ylab("Summed Probability") +
   theme(
@@ -2211,7 +2398,7 @@ perm_spd_plot <-
   )
 
 ggplot2::ggsave(
-  filename = here::here("vignettes/figures/supplemental/Figure_S4.png"),
+  filename = here::here("vignettes/figures/supplemental/Figure_S5.png"),
   plot = perm_spd_plot,
   width = 16,
   height = 18,
@@ -2219,9 +2406,6 @@ ggplot2::ggsave(
 )
 
 ```
-
-
-
 
 # Exploration Code
 ```{r code_exploration}
