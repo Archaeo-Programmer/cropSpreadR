@@ -307,26 +307,65 @@ maize_spread_table <- nodes %>%
     MedianBP,
     GDD,
     elevation,
-    dist_deg:delta_lat_km
+    dist_deg:delta_lat_km,
+    dplyr::starts_with("TwoSigma")
   ) %>%
   dplyr::mutate(
     across(c(NAME, REGION), tools::toTitleCase),
     REGION = ifelse(SiteName == "Guilá Naquitz", "Oaxaca", REGION)
   )
 
-names(maize_spread_table) <-
+sigma_range <- 
+  maize_spread_table %>% 
+  dplyr::select(LabID, dplyr::starts_with("TwoSigma")) %>% 
+  tidyr::pivot_longer(-LabID) %>% 
+    dplyr::filter(!is.na(value)) %>% 
+    dplyr::group_by(LabID) %>% 
+    dplyr::filter(dplyr::row_number() %in% c(1, dplyr::n())) %>% 
+    tidyr::separate(value, into = c("early", "late"), sep = " to ") %>% 
+    tidyr::pivot_longer(c(early, late), names_to = "date") %>% 
+    dplyr::mutate(range = paste0(max(value), " to ", min(value))) %>% 
+    dplyr::select(-c(name, date, value)) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::distinct()
+
+table1 <- maize_spread_table %>% 
+  dplyr::select(LabID:elevation) %>%
+  dplyr::left_join(., sigma_range, by = "LabID") %>% 
+  dplyr::select(LabID:Country, Age, Error, range, MedianBP, Date, everything()) %>% 
+  dplyr::mutate(References = "")
+
+names(table1) <-
   c(
     "Lab ID",
     "Site Name",
     "County",
     "State",
     "Country",
-    "Date",
-    "Age",
-    "Error",
-    "Median BP",
-    "GDD",
-    "Elevation",
+    "14C Age",
+    "14C Error",
+    "95% Confidence Interval BP",
+    "Median cal BP",
+    "Median cal BC/AD",
+    "GDD (°C)",
+    "Elevation (m)",
+    "References"
+  )
+
+readr::write_excel_csv(table1,
+                       here::here("vignettes/tables/Table_1.csv"))
+  
+
+table2 <- maize_spread_table %>% 
+  dplyr::select(LabID:SiteName, Date, dist_deg:delta_lat_km) %>% 
+  dplyr::mutate(dplyr::across(dist_deg:delta_lat_km, ~ sprintf("%.3f", .x)))
+
+
+names(table2) <-
+  c(
+    "Lab ID",
+    "Site Name",
+    "Median cal BC/AD",
     "Euclidean Distance (Degrees)",
     "Euclidean Distance (km)",
     "\u0394 Degrees Euclidean Distance/Year",
@@ -335,8 +374,8 @@ names(maize_spread_table) <-
     "\u0394 km North/Year"
   )
 
-readr::write_excel_csv(maize_spread_table,
-                       here::here("vignettes/tables/Table_1.csv"))
+readr::write_excel_csv(table2,
+                       here::here("vignettes/tables/Table_2.csv"))
 
 
 nodes1 <- nodes %>%
@@ -1742,7 +1781,7 @@ nodes1 <-
     maize_frontier_swus %>% dplyr::filter(SiteName == "Three Fir Shelter") %>% dplyr::mutate(grp = 3)
   ) %>%
   dplyr::arrange(grp, Date) %>%
-  dplyr::select(grp, Long, Lat, SiteName, Date) %>%
+  dplyr::select(grp, Long, Lat, SiteName, Date, LabID) %>%
   dplyr::group_by(grp) %>%
   dplyr::mutate(
     lead_row = geometry[dplyr::row_number() + 1],
@@ -1763,13 +1802,18 @@ nodes1 <-
   dplyr::mutate(id = dplyr::row_number())
 
 maize_spread_table <- nodes1 %>%
-  dplyr::select(-c(id, Long, Lat))
+  dplyr::select(-c(id, Long, Lat)) %>%
+  dplyr::filter(!(SiteName == "Three Fir Shelter" & is.na(dist_deg))) %>% 
+  dplyr::mutate(dplyr::across(dist_deg:delta_lat_km, ~ sprintf("%.3f", .x))) %>% 
+  dplyr::relocate(LabID, .before = "SiteName") %>% 
+  dplyr::arrange(grp, Date)
 
 names(maize_spread_table) <-
   c(
     "Group",
+    "Lab ID",
     "Site Name",
-    "Date",
+    "Median cal BC/AD",
     "Euclidean Distance (Degrees)",
     "Euclidean Distance (km)",
     "\u0394 Degrees Euclidean Distance/Year",
@@ -1778,7 +1822,7 @@ names(maize_spread_table) <-
     "\u0394 km North/Year"
   )
 
-#readr::write_excel_csv(maize_spread_table, here::here("vignettes/tables/Table_1_splitRoute.csv"))
+readr::write_excel_csv(maize_spread_table, here::here("vignettes/tables/supplemental/Table_S1.csv"))
 
 names(nodes1) <-
   c(
