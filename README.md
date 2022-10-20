@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/541789294.svg)](https://zenodo.org/badge/latestdoi/541789294)
+
 # cropSpreadR: Exploring Spread Processes and Rates of Maize Agriculture
 
 `cropSpreadR` is an *R* package implementing functions to perform
