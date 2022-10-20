@@ -1,12 +1,12 @@
-# cropSpreadR: Exploring Spread Processes behind Maize Agriculture
+# cropSpreadR: Exploring Spread Processes and Rates of Maize Agriculture
 
 `cropSpreadR` is an *R* package implementing functions to perform
-analysis on the spread processes of maize agriculture.
+analysis on the spread processes and movement rates of maize agriculture.
 
 This is the official R package for [cropSpreadR](https://github.com/Archaeo-Programmer/cropSpreadR), 
 which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2022 (submitted): 
 
-Gillreath-Brown, A., D. Bird, and T. A. Kohler (2022). What Limited the Spread of Maize in the Prehispanic US Southwest? Submitted to *Journal of Archaeological Science: Reports* for review.
+Gillreath-Brown, A., D. Bird, and T. A. Kohler (2022). Rate Variability on the Maize Northern Frontier in the Prehispanic Southwestern United States: Implications for Earliest Maize. Submitted to *Journal of Archaeological Science: Reports* for review.
     
 All code for analysis, figures, and tables is in [Maize_Spread_Processes.Rmd](vignettes/Maize_Spread_Processes.Rmd).
 
@@ -25,7 +25,6 @@ The [:file\_folder: vignettes](vignettes) directory contains:
 
   - [:page\_facing\_up: Maize_Spread_Processes](vignettes/Maize_Spread_Processes.Rmd): R
     Markdown document with all analysis and code to reproduce the figures and tables for the submitted paper (Gillreath-Brown et al. 2022).
-    It also has a rendered version, [Maize_Spread_Processes.html](vignettes/Maize_Spread_Processes.html), which shows figure and table output.
   - [:file\_folder: figures](vignettes/figures): Plots, figures, and illustrations in the paper, including supplementary materials.
   - [:file\_folder: tables](vignettes/tables): Tables in the paper, including supplementary materials.
   
@@ -43,12 +42,6 @@ You can compile the `cropSpreadR` analysis within R by entering the following in
 
 ``` r
 rmarkdown::render(here::here('vignettes/Maize_Analysis.Rmd'), output_dir = here::here('vignettes'))
-```
-
-If you do not want to compile the R Markdowns, then you can retrieve a readable HTML file by navigating to [Maize_Analysis.html](vignettes/Maize_Analysis.html). Then, click "Raw" and save the file as "Maize_Analysis.html" (i.e., save file with `.html` extension or as HTML file type). Another option, after installing the `cropSpreadR` package, is to use `rstudioapi::viewer` in the R console:
-
-``` r
-rstudioapi::viewer(here::here('vignettes/cropSpreadR.html'))
 ```
 
 Another option for reproducing the results is to use the package itself and follow along with the vignette, [cropSpreadR](vignettes/cropSpreadR.Rmd). Data and functions are already loaded into the package. 

@@ -57,7 +57,10 @@ Imports:
     ggsci,
     p3k14c,
     terra,
-    ggdag
+    ggdag,
+    assertthat,
+    cowplot,
+    ggrepel
 Remotes: 
     zeehio/facetscales,
     Archaeo-Programmer/paleomat
