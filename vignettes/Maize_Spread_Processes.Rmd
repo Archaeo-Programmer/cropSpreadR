@@ -1083,7 +1083,7 @@ fig_envA
 
 ```
 
-```{r Figure_5, fig.cap="Figure 5. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (A. Gillreath-Brown and Kohler, n.d.), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 500-year periods and plotted on the midpoint of each bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_5, fig.cap="Figure 5. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (A. Gillreath-Brown and Kohler n.d. 2022), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 500-year periods and plotted on the midpoint of each bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 MDB_env2 <- MDB_env %>%
   dplyr::filter(Lat >= 30 & Date < 1500) %>%
@@ -1212,7 +1212,7 @@ knitr::kable(stats_table,
 
 ```
 
-```{r Figure_6, fig.cap="Figure 6. A directed acyclic graph of the relationships between the ages of maize on the MFN and the latitude, elevation, and GDD for the sites with this maize. Beta weights on each arrow indicate the size of the effect of the independent variable on the dependent. Solid lines indicate a significant effect (at p < 0.01); the dashed line indicates an effect that is not significant.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_6, fig.cap="Figure 6. A directed acyclic graph of the relationships between the ages of maize on the MNF and the latitude, elevation, and GDD for the sites with this maize. Beta weights on each arrow indicate the size of the effect of the independent variable on the dependent. Solid lines indicate a significant effect (at p < 0.01); the dashed line indicates an effect that is not significant.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 dag_coords <-
   tibble::tibble(
@@ -1300,7 +1300,7 @@ dag_figure
 
 ```
 
-```{r Figure_7, fig.cap="Figure 7. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_7, fig.cap="Figure 7. Regression of the rate of maize dispersal per year along the MNF on the estimated summer temperature anomaly (°C) (Andrew Gillreath-Brown, Bocinsky, and Kohler n.d. 2022) (r2 = 0.16; p = 0.20). Summer temperature estimates increase from left to right on the x-axis. The gray band represents a 95% confidence interval.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 nodes7 <-
   maize_frontier_swus %>%
@@ -1404,7 +1404,7 @@ temp_spreadrate
 
 ```
 
-```{r Figure_8, fig.cap="Figure 8. The 12 counties in the four-state US Southwest with a site on maize’s northern frontier (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_8, fig.cap="Figure 8. The 12 counties showing A) number of radiocarbon samples and B) number of sites with radiocarbon samples in the four-state SWUS with a site on the MNF (2 sites fall within Daggett County, Utah). The northern frontier of maize expansion was located almost entirely within the western Southwest. We still show Delta County here as it is on the MNF; however, we have excluded it from Figure 9 due to sample size.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -1557,7 +1557,7 @@ Figure_8
 
 ```
 
-```{r Figure_9, fig.cap="Figure 9. ", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_9, fig.cap="Figure 9. The MNF relative to the Monte-Carlo simulation test for SPDs for the counties in the four-state southwestern United States that are on the MNF at some point in time (see Gillreath-Brown and Kohler n.d., Figure 6 and site locations in Figure 2). Red points locate the earliest known maize in each county. Sample sizes for the SPDs shown in parentheses and the p value for the global significance test for the summed probabilities. The grey band (or envelope) represents the 95% confidence interval, which is where we would expect 95% of the radiocarbon data to be. Note variability in scales on y axis.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 sw_rc <- cropSpreadR::sw_rc
 
@@ -2774,7 +2774,7 @@ perm_spd_plot
 
 ```
 
-```{r Figure_S6, fig.cap="Figure S6. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (A. Gillreath-Brown and Kohler n.d. 2022), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 100-year periods and plotted on the midpoint of each bin. This is the same as Figure 5 except here we bin the data into 100 year time bins.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_S6, fig.cap="Figure S6. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (Gillreath-Brown and Kohler n.d. 2022), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 100-year periods and plotted on the midpoint of each bin. This is the same as Figure 5 except here we bin the data into 100 year time bins.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
 MDB_env2_Figure_S6 <- MDB_env %>%
   dplyr::filter(Lat >= 30 & Date < 1500) %>%
