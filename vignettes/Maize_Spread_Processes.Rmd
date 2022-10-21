@@ -20,11 +20,14 @@ keep_md: yes
 
 ```{r setup, include = FALSE, results = 'hide', echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide'}
 
+# Run with R version 4.2.1
+# See GitHub repo for more information: https://github.com/Archaeo-Programmer/cropSpreadR
+
 # devtools::install()
 # devtools::load_all()
 library(cropSpreadR)
-require(ggh4x)
 library(cropDiffusionR)
+# Loading additional libraries as having an issue with knitting this rmd. 
 library(raster)
 library(tidyverse)
 
@@ -32,7 +35,7 @@ library(tidyverse)
 
 ```{r load_data, include = FALSE, results = 'hide', echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide'} 
 
-# Load the temperature anomaly reconstruction from paleoMAT package.
+# Load temperature anomaly reconstruction from paleoMAT package.
 temp_anom <-
   readr::read_csv(
     "https://raw.githubusercontent.com/Archaeo-Programmer/paleoMAT/master/vignettes/tables/supp_table_s2.csv",
@@ -45,7 +48,7 @@ temp_anom <-
     se = 4
   )
 
-# Load location data for each sample. Site locations are not saved in this repository, as we want to ensure that archaeological site locations are protected.
+# Load location data for each sample. Site locations are not saved in this repository, as we want to protect archaeological site locations.
 sf::sf_use_s2(FALSE)
 
 MDB <- cropDiffusionR::maizeDB %>%
@@ -70,7 +73,35 @@ MDB <- cropDiffusionR::maizeDB %>%
   sf::st_drop_geometry() %>% 
   suppressMessages()
 
-# Get modern annual accumulated growing degree days at each sample location. 
+# If you do not have your own location information, then you can run the code below using mostly coarse scale location data provided by the p3k14c package (which primarily will have county centroids). If needed, you can uncomment this code (lines 77-102) and run instead of lines 52-74 above. However, some of the samples may not be available in the p3k14c package, and locations could vary up to at least 10 km from the actual site. p3k14c_data has a column that details the location accuracy. Please refer to Table 2 in https://doi.org/10.1038/s41597-022-01118-7 for more information on the p3k14c location accuracy codes.
+# sf::sf_use_s2(FALSE)
+# 
+# MDB <- cropDiffusionR::maizeDB %>%
+#   dplyr::left_join(.,
+#                    p3k14c::p3k14c_data %>% dplyr::select(LabID, Long, Lat),
+#                    by = "LabID") %>%
+#   # Remove any rows that do not have a location.
+#   dplyr::filter(!is.na(Lat) & !is.na(Long)) %>%
+#   # Currently, there is an error with coordinates for AA-3308, so correcting them here.
+#   dplyr::mutate(
+#     Long = dplyr::case_when(SiteName == "Coxcatlan" ~ -97,
+#                             TRUE ~ Long),
+#     Lat = dplyr::case_when(SiteName == "Coxcatlan" ~ 18,
+#                            TRUE ~ Lat)
+#   ) %>%
+#   dplyr::mutate(Long1 = Long, Lat1 = Lat) %>%
+#   # Convert to spatial object
+#   sf::st_as_sf(coords = c("Long1", "Lat1"),
+#                crs = 4326) %>%
+#   sf::st_make_valid() %>%
+#   # Join to counties data to get county and state information.
+#   sf::st_join(cropSpreadR::SWUS_counties) %>%
+#   dplyr::mutate(county_st = ifelse(!is.na(REGION) &
+#                                      !is.na(NAME), paste(NAME, REGION, sep = ", "), NA)) %>%
+#   sf::st_drop_geometry() %>%
+#   suppressMessages()
+
+# Get modern annual accumulated growing degree days (GDD) (°C) at each sample location. 
 # For Mexico, we use WorldClim 30 sec. (~1 km) for GDD data.
 MDB_gdd_wc <- MDB %>%
   sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
@@ -78,13 +109,13 @@ MDB_gdd_wc <- MDB %>%
   cropDiffusionR::extract_GDD(gdd_raster = cropDiffusionR::WorldClim_annual_gdd,
                               sites = .)
 
-# For USA, we use PRISM (~800 meters) for GDD data.
+# For USA, we use PRISM (~800 meters) for modern annual accumulated GDD (°C) data.
 MDB_gdd_prism <- MDB %>%
   sf::st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
   dplyr::select(LabID) %>%
   cropDiffusionR::extract_GDD(gdd_raster = cropSpreadR::PRISM_annual_gdd,  sites = .)
 
-# Join the GDD together.
+# Combine GDD together, where PRISM takes precedence over WorldClim.
 MDB_gdd <-
   dplyr::left_join(MDB_gdd_prism, MDB_gdd_wc, by = "LabID") %>%
   dplyr::mutate(GDD = dplyr::coalesce(GDD.x, GDD.y)) %>%
@@ -224,7 +255,6 @@ swus_date_distribution_stacked <- maize_earliest_distribution %>%
       face = "bold"
     ),
     axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -2439,7 +2469,6 @@ ckde_plot <-
       face = "bold"
     ),
     axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -2671,7 +2700,6 @@ perm_spd_plot <-
       face = "bold"
     ),
     axis.ticks.length = unit(0.125, "inch"),
-    #ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
