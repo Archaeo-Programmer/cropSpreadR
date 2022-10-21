@@ -55,7 +55,7 @@ MDB <- cropDiffusionR::maizeDB %>%
   dplyr::left_join(.,
                    readr::read_csv(
                      stringr::str_remove(
-                       here::here("Paper 2/Maize_Database_Locations_DONT_DISTRIBUTE.csv"),
+                       here::here("maize_database/Maize_Database_Locations_DONT_DISTRIBUTE.csv"),
                        "cropSpreadR/"
                      ),
                      col_types = readr::cols()
@@ -101,6 +101,7 @@ MDB <- cropDiffusionR::maizeDB %>%
 #   sf::st_drop_geometry() %>%
 #   suppressMessages()
 
+
 # Get modern annual accumulated growing degree days (GDD) (°C) at each sample location. 
 # For Mexico, we use WorldClim 30 sec. (~1 km) for GDD data.
 MDB_gdd_wc <- MDB %>%
@@ -115,7 +116,7 @@ MDB_gdd_prism <- MDB %>%
   dplyr::select(LabID) %>%
   cropDiffusionR::extract_GDD(gdd_raster = cropSpreadR::PRISM_annual_gdd,  sites = .)
 
-# Combine GDD together, where PRISM takes precedence over WorldClim.
+# Combine GDD together (i.e., coalesce), where PRISM takes precedence over WorldClim data.
 MDB_gdd <-
   dplyr::left_join(MDB_gdd_prism, MDB_gdd_wc, by = "LabID") %>%
   dplyr::mutate(GDD = dplyr::coalesce(GDD.x, GDD.y)) %>%
@@ -170,17 +171,20 @@ maize_frontier_mexico <- MDB_env %>%
 
 ```{r Figure_1, fig.cap="Figure 1. Frequency distribution of directly dated maize macrofossils in our maize database for sites that are north of 30° latitude and older than AD 1500 (n = 985), distinguishing between the earliest maize sample at each site (n = 275), and all other maize samples fitting the criteria above (n = 710). Two of the earliest maize sites, Las Capas and Old Corn, are individually labeled.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
+# Get earliest maize samples from each site that are north of 30° latitude and less than AD 1500.
 maize_earliest_distribution <- MDB_env %>%
   dplyr::filter(Lat > 30 & Date < 1500) %>%
   dplyr::group_by(SiteIDName) %>%
   dplyr::slice_min(Date, with_ties = FALSE) %>%
   dplyr::mutate(sample = "Earliest Maize Subset")
 
+# Get all maize samples from each site that are north of 30° latitude and less than AD 1500.
 full_distribution <- MDB_env %>%
   dplyr::filter(Lat > 30 & Date < 1500) %>%
   dplyr::mutate(sample = "Full Maize Database") %>%
   dplyr::filter(!LabID %in% maize_earliest_distribution$LabID)
 
+# Combine data together, so that we can plot both sets as histograms on the same plot.
 swus_date_distribution_stacked <- maize_earliest_distribution %>%
   dplyr::bind_rows(., full_distribution) %>%
   dplyr::ungroup() %>%
@@ -304,8 +308,9 @@ swus_date_distribution_stacked
 
 ```
 
-```{r Figure_2, fig.cap="Figure 2. Spread rates for maize beginning from Guilà Naquitz to sites in the US Southwest on maize’s northern frontier as defined in the text. A) Only change in northing contributes to the distance categories differentiated in the legend. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_2, fig.cap="Figure 2. Spread rates for maize beginning from Guilá Naquitz to sites in the SWUS on the MNF as defined in the text. A) Only change in northing contributes to the rates measured. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
+# Get the maize northern frontier starting in Mexico, then calculate euclidean distance between sites and latitude North distance.
 nodes <-
   maize_frontier_mexico %>%
   dplyr::mutate(
@@ -314,58 +319,32 @@ nodes <-
   ) %>%
   dplyr::arrange(Date) %>%
   dplyr::mutate(id = dplyr::row_number()) %>%
+  # Calculate the distance between rows and store distance on the arrival location row.
   dplyr::mutate(
+    # First, get the next row. Lag or row_number() - 1 does not work for geometry; thus, we had to use this to get the lead row.
     lead_row = geometry[dplyr::row_number() + 1],
+    # Second, calculate the distance between the rows using euclidean distance. Then, we use lag so that it returns it for the later sample (arrival location).
+    # We use lag since we cannot use it on the geometry and had to use lead instead.
     dist_deg = as.numeric(dplyr::lag(
       sf::st_distance(geometry, lead_row, by_element = TRUE, which = "Euclidean")
     )),
+    # Convert degrees to km. We use the approximate 110.574 for the calculation (http://www.thegreenwichmeridian.org/tgm/articles.php?article=5).
     dist_km = dist_deg * 110.574,
+    # Determine the change in degrees distance from the euclidean distance calculation above.
     delta_deg = dist_deg / (Date - dplyr::lag(Date)),
+    # Determine the change in km distance from the euclidean distance calculation above.
     delta_km = dist_km / (Date - dplyr::lag(Date)),
+    # Get the change in degrees latitude between sites, and limit the number of decimal points.
     delta_lat_deg = ((Lat - dplyr::lag(Lat))) / (Date - dplyr::lag(Date)),
     delta_lat_deg = as.numeric(sprintf("%.4f", delta_lat_deg)),
+    # Get the change in km latitude between sites.
     delta_lat_km = delta_lat_deg * 110.574
   ) %>%
   dplyr::select(-lead_row) %>%
-  sf::st_drop_geometry()
+  sf::st_drop_geometry() %>%
+  suppressWarnings()
 
-maize_spread_table <- nodes %>%
-  dplyr::arrange(Date) %>%
-  dplyr::select(
-    LabID,
-    SiteName,
-    NAME,
-    REGION,
-    Country,
-    Date,
-    Age,
-    Error,
-    MedianBP,
-    GDD,
-    elevation,
-    dist_deg:delta_lat_km,
-    dplyr::starts_with("TwoSigma")
-  ) %>%
-  dplyr::mutate(
-    across(c(NAME, REGION), tools::toTitleCase),
-    REGION = ifelse(SiteName == "Guilá Naquitz", "Oaxaca", REGION)
-  )
-
-sigma_range <- 
-  maize_spread_table %>% 
-  dplyr::select(LabID, dplyr::starts_with("TwoSigma")) %>% 
-  tidyr::pivot_longer(-LabID) %>% 
-    dplyr::filter(!is.na(value)) %>% 
-    dplyr::group_by(LabID) %>% 
-    dplyr::filter(dplyr::row_number() %in% c(1, dplyr::n())) %>% 
-    tidyr::separate(value, into = c("early", "late"), sep = " to ") %>% 
-    tidyr::pivot_longer(c(early, late), names_to = "date") %>% 
-    dplyr::mutate(range = paste0(max(value), " to ", min(value))) %>% 
-    dplyr::select(-c(name, date, value)) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::distinct()
-
-
+# Keep only select columns that we will use for plotting.
 nodes1 <- nodes %>%
   dplyr::select(
     c(
@@ -383,6 +362,7 @@ nodes1 <- nodes %>%
     )
   )
 
+# Change names of columns.
 names(nodes1) <-
   c(
     "id",
@@ -398,6 +378,7 @@ names(nodes1) <-
     "delta_lat_km"
   )
 
+# Get shapefiles for world boundaries.
 country_shapes1 <-
   ggplot2::geom_polygon(
     aes(x = long, y = lat, group = group),
@@ -407,6 +388,7 @@ country_shapes1 <-
     size = 0.15
   )
 
+# Get shapefiles for states.
 country_shapes2 <-
   ggplot2::geom_polygon(
     aes(x = long, y = lat, group = group),
@@ -416,26 +398,27 @@ country_shapes2 <-
     size = 0.15
   )
 
+# Set lat/long limits for plotting.
 mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521,-92),
                        ylim = c(14.72716, 42.001167))
 
-legend.breaks = 3
-
-
-# Figure 2a. Change in N latitude (°) per year.
+# Create an edge list.
 edges2a <- data.frame(from = 1:13,
                      to = 2:14,
                      color = nodes1$delta_lat_km[!is.na(nodes1$delta_lat_km)])
 
+# Join the edges together with the node data.
 edges_for_plot2a <- edges2a %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
   dplyr::inner_join(nodes1 %>% dplyr::select(id, lon, lat), by = c('to' = 'id')) %>%
   dplyr::rename(xend = lon, yend = lat)
 
+# Check that the edge list and the joins with node data still produce the same number of rows.
 assertthat::assert_that(nrow(edges_for_plot2a) == nrow(edges2a))
 
+# Figure 2a. Change in N latitude (°) per year. 
 maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   country_shapes1 +
   country_shapes2 +
@@ -480,6 +463,7 @@ maize_frontier_mexico_delta_Lat <- ggplot(nodes1) +
   theme_void() +
   theme(
     plot.margin = grid::unit(c(2, 2, 2, 2), "mm"),
+    legend.justification = c(0,1),
     legend.box.spacing = unit(20.0, "pt"),
     legend.key.size = unit(0.55, "cm"),
     legend.text = element_text(size = 14, family = "Helvetica"),
@@ -556,6 +540,7 @@ maize_frontier_mexico_euclidean_dist <- ggplot(nodes1) +
   theme_void() +
   theme(
     plot.margin = grid::unit(c(2, 2, 2, 2), "mm"),
+    legend.justification = c(0,1),
     legend.box.spacing = unit(20.0, "pt"),
     legend.key.size = unit(0.55, "cm"),
     legend.text = element_text(size = 14, family = "Helvetica"),
@@ -589,7 +574,7 @@ Figure_2 <-
 Figure_2
 
 # ggplot2::ggsave(
-#   Figure_2,
+#   #Figure_2,
 #   filename = here::here("vignettes/figures/Figure_2.png"),
 #   width = 13.7,
 #   height = 10.2,
@@ -599,6 +584,44 @@ Figure_2
 ```
 
 ```{r Table1, echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'asis'}
+
+# Select some specific columns, which we will use to create Table 1 below (in the next code chunk).
+maize_spread_table <- nodes %>%
+  dplyr::arrange(Date) %>%
+  dplyr::select(
+    LabID,
+    SiteName,
+    NAME,
+    REGION,
+    Country,
+    Date,
+    Age,
+    Error,
+    MedianBP,
+    GDD,
+    elevation,
+    dist_deg:delta_lat_km,
+    dplyr::starts_with("TwoSigma")
+  ) %>%
+  dplyr::mutate(
+    across(c(NAME, REGION), tools::toTitleCase),
+    REGION = ifelse(SiteName == "Guilá Naquitz", "Oaxaca", REGION)
+  )
+
+# Pull out just LabID and the two sigma columns, so that we can extract the two-sigma range for each LabID, which we will include in Table 1.
+sigma_range <-
+  maize_spread_table %>%
+  dplyr::select(LabID, dplyr::starts_with("TwoSigma")) %>%
+  tidyr::pivot_longer(-LabID) %>%
+  dplyr::filter(!is.na(value)) %>%
+  dplyr::group_by(LabID) %>%
+  dplyr::filter(dplyr::row_number() %in% c(1, dplyr::n())) %>%
+  tidyr::separate(value, into = c("early", "late"), sep = " to ") %>%
+  tidyr::pivot_longer(c(early, late), names_to = "date") %>%
+  dplyr::mutate(range = paste0(max(value), " to ", min(value))) %>%
+  dplyr::select(-c(name, date, value)) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct()
 
 table1 <- maize_spread_table %>% 
   dplyr::select(LabID:elevation) %>%
@@ -658,12 +681,14 @@ knitr::kable(table2,
              
 ```
 
-```{r Figure_3, fig.cap="Figure 3. Spread rates for maize beginning from Las Capas to sites in the US Southwest on the MNF as defined in the text. A) Only change in northing contributes to the distance categories differentiated in the legend. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
+```{r Figure_3, fig.cap="Figure 3. Spread rates for maize beginning from Las Capas to sites in the SWUS on the MNF as defined in the text. A) Only change in northing contributes to the rates measured. B) As in A, except rates are expressed as Euclidean distances.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
+# Use the same data as above for Figure 2; however, we remove Mexico sites from the frontier to focus just on the southwestern United States.
 nodes2 <- nodes1 %>%
   dplyr::filter(name != "Guilá Naquitz") %>%
   dplyr::mutate(id = dplyr::row_number())
 
+# Get state shapefiles for plotting.
 country_shapes1 <-
   ggplot2::geom_polygon(
     aes(x = long, y = lat, group = group),
@@ -673,11 +698,10 @@ country_shapes1 <-
     size = 0.15
   )
 
+# Set lat/long limits for plotting.
 mapcoords1 <-
   ggplot2::coord_fixed(xlim = c(-114.814521, -105),
                        ylim = c(31.333254, 42))
-
-legend.breaks = 3
 
 # Figure 3a. Change in km North latitude per year.
 edges3a <- data.frame(from = 1:12,
@@ -860,6 +884,7 @@ gdd_cropped <-
 gdd_cropped <-
   raster::mask(gdd_cropped, cropDiffusionR::swus_states)
 
+# Convert to dataframe for plotting.
 NASW_gdd_data <-
   raster::as.data.frame(gdd_cropped, xy = TRUE)
 # Assign names to the columns.
