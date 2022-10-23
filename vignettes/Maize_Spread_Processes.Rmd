@@ -623,10 +623,12 @@ sigma_range <-
   dplyr::ungroup() %>%
   dplyr::distinct()
 
+# Select particular columns and add two sigma data to table.
 table1 <- maize_spread_table %>% 
   dplyr::select(LabID:elevation) %>%
   dplyr::left_join(., sigma_range, by = "LabID") %>% 
   dplyr::select(LabID:Country, Age, Error, range, MedianBP, Date, everything()) %>% 
+  # We use paperpile to compile references in a google doc, so we just put a place holder for the column here.
   dplyr::mutate(References = "")
 
 names(table1) <-
@@ -656,6 +658,7 @@ knitr::kable(table1,
 
 ```{r Table2, echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'asis'}
 
+# Table 2 just focuses on the distance and change in distance data. 
 table2 <- maize_spread_table %>% 
   dplyr::select(LabID:SiteName, Date, dist_deg:delta_lat_km) %>% 
   dplyr::mutate(dplyr::across(dist_deg:delta_lat_km, ~ sprintf("%.3f", .x)))
@@ -708,6 +711,7 @@ edges3a <- data.frame(from = 1:12,
                       to = 2:13,
                       color = nodes2$delta_lat_km[-1])
 
+# Create edge list.
 edges_for_plot3a <- edges3a %>%
   dplyr::inner_join(nodes2 %>% dplyr::select(id, lon, lat), by = c('from' = 'id')) %>%
   dplyr::rename(x = lon, y = lat) %>%
@@ -850,6 +854,7 @@ maize_frontier_SW_delta_euclidean <- ggplot(nodes2) +
 #   dpi = 600
 # )
 
+# Use cowplot to put the 2 figures together.
 Figure_3 <-
   cowplot::plot_grid(
     maize_frontier_SW_delta_Lat,
@@ -897,6 +902,7 @@ NASW_gdd_data_transformed <-
     output_names = c("x", "y")
   )
 
+# We add Turkey Pen as an additional site to plot, but we distinguish between the Maize Northern Frontier and Other sites that we want to plot. 
 maize_frontier_swus_tp <- maize_frontier_swus %>%
   dplyr::mutate(`Site Type` = "Maize Frontier") %>%
   dplyr::bind_rows(
@@ -1062,6 +1068,7 @@ scale_fill_gradientn(
     )
   )
 
+# Use cowplot to put the GDD and elevation maps in the same figure.
 fig_envA <-
   cowplot::plot_grid(
     NED_output,
@@ -1085,6 +1092,7 @@ fig_envA
 
 ```{r Figure_5, fig.cap="Figure 5. Box plots showing elevation, GDD, and latitude through time for the earliest maize sample from each of 275 sites in our database (A. Gillreath-Brown and Kohler n.d. 2022), excluding 19 sites post-dating AD 1500 or south of 30° Latitude. Samples are binned by 500-year periods and plotted on the midpoint of each bin.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
+# Limit box plot to just be greater than 30° N and less than AD 1500. We want only the oldest samples from each site, then we group in 500 year time bins for plotting the box plots.  
 MDB_env2 <- MDB_env %>%
   dplyr::filter(Lat >= 30 & Date < 1500) %>%
   dplyr::group_by(SiteIDName) %>%
@@ -1100,9 +1108,11 @@ MDB_env2 <- MDB_env %>%
   dplyr::arrange(date2) %>%
   dplyr::rename(Latitude = Lat, Elevation = elevation)
 
+# Get the average for the 3 variables. 
 env_summaries <- MDB_env2 %>%
   dplyr::summarise(dplyr::across(c(Latitude, GDD, Elevation), ~ mean(.x, na.rm = TRUE)))
 
+# Transform the data into long format for plotting.
 env_summaries_bp <-
   MDB_env2 %>%
   dplyr::select(date2, Latitude, GDD, Elevation) %>%
@@ -1168,6 +1178,7 @@ env_summaries_bp
 
 ```{r multiple_linear_regression, echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'asis'}
 
+# Limit regressions to sites greater than 30° N and less than AD 1500, and only to the Maize Northern Frontier sites.
 mlr <- MDB_env %>%
   dplyr::group_by(SiteIDName) %>%
   dplyr::slice_min(Date) %>%
@@ -1179,16 +1190,19 @@ mlr <- MDB_env %>%
   dplyr::filter(LabID %in% maize_frontier_swus$LabID) %>%
   dplyr::ungroup()
 
+# Rescale the 4 variables.
 mlr2 <- mlr %>%
   dplyr::select(Date, Lat, elevation, GDD) %>% 
   dplyr::mutate(dplyr::across(everything(), scales::rescale))
 
+# Calculate the simple linear regressions for each combination of variables for plotting on the dag.
 gdd_lat <- lm(GDD ~ Lat, data = mlr2)
 gdd_elev <- lm(GDD ~ elevation, data = mlr2)
 date_lat <- lm(Date ~ Lat, data = mlr2)
 date_elev <- lm(Date ~ elevation, data = mlr2)
 date_gdd <- lm(Date ~ GDD, data = mlr2)
 
+# Extract all the statistics for the linear regressions.
 stats_table <-
   purrr::map_dfr(list(gdd_lat, gdd_elev, date_lat, date_elev, date_gdd), function(x) {
     x %>%
@@ -1214,6 +1228,7 @@ knitr::kable(stats_table,
 
 ```{r Figure_6, fig.cap="Figure 6. A directed acyclic graph of the relationships between the ages of maize on the MNF and the latitude, elevation, and GDD for the sites with this maize. Beta weights on each arrow indicate the size of the effect of the independent variable on the dependent. Solid lines indicate a significant effect (at p < 0.01); the dashed line indicates an effect that is not significant.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.align = "left"}
 
+# Create layout for the dag.
 dag_coords <-
   tibble::tibble(
     name = c("Latitude", "Elevation", "GDD", "Date"),
@@ -1221,13 +1236,17 @@ dag_coords <-
     y    = c(3, 3, 2, 1)
   )
 
+# Create connections in the dag.
 dag_out <- ggdag::dagify(GDD ~ Latitude + Elevation,
                          Date ~ GDD,
                          Date ~ Latitude + Elevation,
                          coords = dag_coords) %>%
+  # Put in a tidy format.
   ggdag::tidy_dagitty() %>%
+  # Use a custom function to shorten the dag arrows on both ends.
   cropSpreadR::shorten_dag_arrows(proportion = 0.27)
 
+# Add the slope (i.e., beta weights) to the tidy tibble, so that we can also plot the beta weights on the dag.
 dag_out$data <-
   dplyr::left_join(
     x = dag_out$data,
@@ -1252,6 +1271,7 @@ dag_out$data <-
   ) %>%
   dplyr::ungroup()
 
+# Plot the dag.
 dag_figure <- dag_out %>%
   ggplot(aes(
     x = x,
